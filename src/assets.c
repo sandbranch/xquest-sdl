@@ -142,6 +142,7 @@ static int load_comix_font(const char *path, Sprite font[128]) {
         size_t sz = (size_t)w * h;
         if (code < 128) {
             Sprite *s = &font[code];
+            free(s->px);
             s->w    = w;
             s->h    = h;
             s->mask = NULL;

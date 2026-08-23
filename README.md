@@ -1,15 +1,28 @@
-# xquest-sdl
+# XQuest, still going after 30 years
 
-An unofficial port of **XQuest v1.3** to modern Linux using C and SDL2.
+I first played **XQuest** as DOS shareware sometime in the mid-90s, and it
+never really left. Different machines, different decades, same jolly
+little ship dingus flying around blowing things up for gem thingies. This
+is my attempt to make sure it never has to leave — a faithful, native
+Linux/SDL2 port of **XQuest v1.3**, the arcade shooter Mark Mackey wrote
+in Turbo Pascal and released as shareware in 1994–1996. Same physics,
+same 50 levels, same 18 enemy types, same demented sense of humour in the
+original docs. No DOSBox required.
 
-XQuest is a top-down arcade shooter originally written in Turbo Pascal by
-**Mark Mackey** and released as shareware in 1994–1996. You pilot a small
-ship through 50 levels, collecting crystals to open an exit gate while
-fending off 18 distinct enemy types, powerups, and smart bombs.
+> The invasion fleet of the hideous Mucoids is hurtling towards the
+> Earth, intent on blasting it into tiny steaming shreds of radioactive
+> grit, and only your ship, armed with our latest top secret Super
+> Kill-o-Zapper Atomic Phaser Photon Laser Cannons can... hang on, sorry,
+> wrong game. You're a jolly little ship dingus which shoots around a
+> rather abstract landscape collecting little gem thingies, while
+> avoiding mines. Boring, you say? Well, we kept the Super Kill-o-Zapper,
+> and added LOTS of things to blow up. Happy?
+>
+> — *the original XQuest manual, Mark Mackey, 1994*
 
-> All gameplay, levels, assets, and design are the work of Mark Mackey.
-> This port exists to let the game run natively on modern Linux without a
-> DOS emulator.
+> All gameplay, levels, and original assets are the work of Mark Mackey.
+> This port exists so the game can keep running on hardware Mark never
+> imagined, without an emulator in between.
 
 ---
 
@@ -19,15 +32,28 @@ fending off 18 distinct enemy types, powerups, and smart bombs.
 - SDL2 (`libsdl2-dev`)
 - CMake 3.16+
 - GCC or Clang (C99)
-- The original XQuest asset files (see below)
+- Python 3 (for the asset-conversion step)
+- Your own legally-obtained copy of the original XQuest shareware files
+  (see below)
 
 ## Asset files
 
-The original XQuest shareware assets are required at runtime. By default
-the build looks for them one directory up at `../xquest/`. You can override
-this with `-DXQUEST_ASSET_DIR=/path/to/assets` when running CMake.
+XQuest's original sprites, sounds, and level data are Mark Mackey's
+copyrighted freeware — his license lets the game be freely shared, but
+not redistributed baked into someone else's source repository. So this
+repo ships the *port*, not the *game data*: `assets/` is gitignored and
+you populate it yourself from a copy of the original 1994–1996 XQuest
+shareware distribution, which is still floating around the usual
+freeware archives (search "XQuest 1.3 Mark Mackey").
 
-Required files in that directory:
+If you have that distribution sitting in a sibling directory `../xquest`,
+one script does the rest:
+
+```sh
+scripts/fetch-assets.sh
+```
+
+Required files it looks for:
 
 ```
 xquest.gfx    sprites (ship, enemies, fonts, gates, HUD icons)
@@ -38,8 +64,8 @@ xquest.snd    sound effects (8-bit 11025 Hz mono PCM)
 startpic.pbm  title screen banner
 ```
 
-These are included in the original XQuest shareware distribution, which
-remains freely available.
+Don't have `../xquest`? Set `XQUEST_SRC=/path/to/xquest` and rerun the
+script.
 
 ## Build
 
@@ -49,7 +75,7 @@ cmake --build build
 ./build/xquest
 ```
 
-To point at a different asset directory:
+To point the build at a different asset directory:
 
 ```sh
 cmake -B build -DXQUEST_ASSET_DIR=/path/to/xquest
@@ -62,20 +88,20 @@ cmake --build build
 
 ### Objective
 
-Each level contains a set of **crystals** scattered across the game world.
-Fly over them to collect them. Once all crystals are collected the **exit
-gate** at the top of the screen opens. Fly through the gate to advance to
-the next level.
+Each level scatters a set of **crystals** across the game world. Fly
+over them to collect them. Once every crystal is collected, the **exit
+gate** at the top of the screen opens — fly through it to advance.
 
-Watch out for **mines** — flying into one destroys your ship instantly
-(unless you have a Shield powerup active).
+Watch out for **mines** — flying into one destroys your ship instantly,
+unless a Shield powerup is active.
 
 ### The game world
 
-The world (392×320 logical pixels) is larger than the viewport (320×217).
-The camera scrolls to keep your ship near the centre. The border is a
-5-line 3D pipe. Enemy entry gates are in the left and right walls at
-mid-height; enemies materialise from them with a short animation.
+The world (392×320 logical pixels) is larger than the viewport
+(320×217). The camera scrolls to keep your ship near the centre. The
+border is a 5-line 3D pipe. Enemy entry gates sit in the left and right
+walls at mid-height; enemies materialise from them with a short
+animation.
 
 ### Difficulty
 
@@ -88,6 +114,10 @@ Chosen from the main menu before the game starts.
 | Average | 1.0× speed, 1.0× spawn rate |
 | Tricky | 1.5× speed, 1.2× spawn rate |
 | Inhuman | 2.0× speed, 1.5× spawn rate |
+
+Make it to Inhuman and, per the original manual, you're due "a UUencoded
+GIF of a tenner" from Mark Mackey personally. Offer status: unconfirmed,
+30 years on.
 
 ---
 
@@ -121,10 +151,10 @@ Firing inherits your current velocity — a fast ship fires fast missiles.
 
 ## Powerups
 
-Powerups are granted by collecting **Supercrystals** — fast-moving bouncing
-sprites that appear in later levels. Each Supercrystal grants one randomly
-chosen powerup. Active powerups are shown as icons in the centre of the
-status bar; they blink when about to expire.
+Powerups are granted by collecting **Supercrystals** — fast-moving
+bouncing sprites that appear in later levels. Each Supercrystal grants
+one randomly chosen powerup. Active powerups are shown as icons in the
+centre of the status bar; they blink when about to expire.
 
 | Icon slot | Powerup | Duration | Effect |
 |-----------|---------|----------|--------|
@@ -191,6 +221,15 @@ Score values range from 200 (Grunger) to 7500 (Repulsor). Meeby is worth
 
 ---
 
+## Packaging
+
+- `cmake --install` installs to `/usr/games` + `/usr/share/games/xquest`,
+  Debian-convention paths.
+- `debian/` — Debian packaging (`xquest` + `xquest-data` binary packages).
+- `scripts/build-appimage.sh` — builds a portable AppImage.
+
+---
+
 ## Original game
 
 - **Author:** Mark Mackey (Atomjack)
@@ -200,7 +239,8 @@ Score values range from 200 (Grunger) to 7500 (Repulsor). Meeby is worth
 
 The original shareware package and its source code were released by Mark
 Mackey. If you enjoy the game, the spirit of the original shareware model
-still applies.
+still applies — pass it on, don't sell it, and buy the man a beer if you
+ever run into him.
 
 ## License
 
