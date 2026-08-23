@@ -1,0 +1,50 @@
+.TH XQUEST 6 "2026-06-11" "1.3-1" "Games"
+.SH NAME
+xquest \- top-down arcade shooter (XQuest v1.3 SDL2 port)
+.SH SYNOPSIS
+.B xquest
+.SH DESCRIPTION
+.B xquest
+is a faithful SDL2 port of XQuest v1.3, a fast-paced top-down arcade
+shooter originally written for DOS by Mark Mackey in 1994.
+.PP
+Pilot a spaceship through 50 levels.
+Collect all crystals on each level to open the exit gate, then fly
+through it to advance.
+Meanwhile, avoid or destroy up to 18 distinct enemy types and their
+missiles, collect powerups, and use smart bombs strategically.
+.SH CONTROLS
+.TP
+.B Arrow keys / WASD
+Move the ship.
+.TP
+.B Left Shift / Right Shift / Numpad\~5
+Brake (reduce velocity).
+.TP
+.B Space / Left mouse button
+Fire.
+.TP
+.B Escape
+Return to the main menu.
+.SH DIFFICULTY LEVELS
+.TP
+.B Wimp
+Enemies are slower; ship bounces off walls.
+.TP
+.B Timid / Average / Tricky / Inhuman
+Progressively faster enemies; contact with walls destroys the ship
+(unless the Shield powerup is active).
+.SH FILES
+.TP
+.I /usr/share/games/xquest/
+Read-only game data (sprites, sounds, enemy definitions).
+.TP
+.I ~/.config/xquest/xquest.scr
+Per-user high-score table (created automatically).
+.SH SEE ALSO
+The original XQuest documentation is available in the original DOS
+distribution (XQUEST.DOC).
+.SH AUTHOR
+SDL2 port by David <david@katalystnord.com>.
+.PP
+Original XQuest v1.3 by Mark Mackey, Copyright \(co 1994\(en1996.

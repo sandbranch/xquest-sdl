@@ -1,0 +1,31 @@
+This directory holds the XQuest v1.3 game data - the whole game, as released.
+
+Bundled files
+-------------
+  xquest.gfx    - all sprites (ship, enemies, objects, fonts, gates)
+  xquest.enm    - binary enemy definitions
+  xquest.fnt    - small in-game status-bar font
+  xquest2.fnt   - large Comix menu font
+  xquest.snd    - raw 8-bit 11025 Hz mono PCM sound effects
+  startpic.pbm  - title-screen planar bitmap (startpic.raw is generated
+                  from it at build time by tools/convert_pbm.py)
+
+Not bundled (gitignored)
+-------------------------
+  *.json                 - this project's own decoded/human-readable
+                            dumps from tools/decode_assets.py. Redundant
+                            with the binary files above; the compiled
+                            engine never reads them.
+  config.json/.cfg,
+  hiscores.json/.scr      - personal save state, not game content.
+
+To refresh from a newer or different original distribution, run:
+
+    scripts/fetch-assets.sh
+
+That script copies the required files from an adjacent ../xquest/
+directory (an original DOS source/binary distribution).
+
+A separate, complete archival copy of the original XQuest distribution
+is attached to a dedicated GitHub Release for preservation. See the
+repository's Releases page.

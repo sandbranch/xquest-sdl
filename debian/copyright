@@ -1,0 +1,38 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: xquest-sdl
+Upstream-Contact: David <david@katalystnord.com>
+Source: https://github.com/sandbranch/xquest-sdl
+
+Files: src/* CMakeLists.txt tools/* scripts/* debian/*
+Copyright: 2024-2026 David <david@katalystnord.com>
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2 of the License, or (at your
+ option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in /usr/share/common-licenses/GPL-2.
+
+Files: assets/*
+Copyright: 1994-1996 Mark Mackey
+License: XQuest-Freeware
+ XQuest is released as freeware.  You are free to copy and distribute
+ the complete original distribution at no charge.  The following
+ restrictions apply:
+ .
+  - The game may not be included in a commercial CD-ROM or software
+    compilation without the express written permission of the author.
+  - The game may not be bundled with hardware or software for sale.
+  - All files in the original distribution must be distributed together.
+ .
+ The full licence text is in the file LICENSE.DOC included with the
+ original XQuest v1.3 distribution.
+ .
+ NOTE: The original game data (assets/) is NOT DFSG-free.  This package
+ is intended for personal use or unofficial distribution only.

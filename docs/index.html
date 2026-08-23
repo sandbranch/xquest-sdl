@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XQuest - a 30-year-old arcade shooter, still alive on Linux</title>
+<meta name="description" content="A faithful SDL2 port of Mark Mackey's 1994 DOS shareware classic XQuest, running natively on modern Linux.">
+<style>
+  :root{
+    --bg:#05040a; --panel:#0d0b1a; --panel-border:#241f3d;
+    --fg:#eae6ff; --muted:#a79fcf; --accent:#ff5fd1; --accent2:#5fe1ff;
+    --gold:#ffd24a; --mono:'Courier New', ui-monospace, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+       line-height:1.6; overflow-x:hidden;}
+  a{color:var(--accent2)}
+  a:hover{color:var(--accent)}
+
+  #starfield{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;background:var(--bg);}
+
+  .wrap{position:relative;z-index:1;max-width:880px;margin:0 auto;padding:0 24px;}
+
+  header.hero{position:relative;padding:96px 0 72px;text-align:center;}
+  .title{
+    font-family:var(--mono); font-weight:700; letter-spacing:.12em;
+    font-size:clamp(2.4rem,9vw,5.2rem); margin:0;
+    color:var(--fg);
+    text-shadow:0 0 6px var(--accent), 0 0 22px rgba(255,95,209,.55), 0 0 60px rgba(95,225,255,.25);
+  }
+  .tagline{font-size:clamp(1rem,2.4vw,1.25rem);color:var(--muted);margin:14px 0 30px;}
+  .badgebar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:34px;}
+  .badge{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--muted);
+    border:1px solid var(--panel-border);background:rgba(255,255,255,.02);
+    padding:4px 10px;border-radius:999px;}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+  .btn{font-family:var(--mono);display:inline-block;padding:12px 22px;border-radius:8px;
+    text-decoration:none;font-size:.95rem;letter-spacing:.02em;border:1px solid transparent;
+    transition:transform .12s ease;}
+  .btn:hover{transform:translateY(-2px);}
+  .btn-primary{background:var(--accent);color:#1a0713;border-color:var(--accent);}
+  .btn-primary:hover{color:#1a0713;}
+  .btn-ghost{background:transparent;color:var(--fg);border-color:var(--panel-border);}
+  .btn-ghost:hover{color:var(--fg);border-color:var(--accent2);}
+
+  main{padding-bottom:100px;}
+  section{margin:56px 0;}
+  h2{font-family:var(--mono);color:var(--gold);letter-spacing:.04em;
+     font-size:1.15rem;text-transform:uppercase;border-bottom:1px dashed var(--panel-border);
+     padding-bottom:10px;margin-bottom:20px;}
+  .card{background:var(--panel);border:1px solid var(--panel-border);border-radius:12px;padding:24px 28px;}
+  blockquote{
+    font-style:italic;color:var(--muted);border-left:3px solid var(--accent);
+    margin:0;padding:4px 0 4px 20px;
+  }
+  blockquote cite{display:block;margin-top:10px;font-style:normal;color:var(--accent2);font-size:.85rem;}
+
+  pre{background:#000;border:1px solid var(--panel-border);border-radius:8px;
+      padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.88rem;color:#c9ffcf;}
+  code{font-family:var(--mono);}
+
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--panel-border);}
+  th{color:var(--gold);font-family:var(--mono);font-weight:600;font-size:.8rem;text-transform:uppercase;}
+  td.num{color:var(--muted);font-family:var(--mono);width:2.5em;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr;}}
+
+  .stamp{font-family:var(--mono);color:var(--muted);font-size:.85rem;}
+
+  .hero-ship{image-rendering:pixelated;display:block;margin:0 auto 8px;filter:drop-shadow(0 0 14px rgba(95,225,255,.5));}
+  .roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;margin-top:6px;}
+  .roster figure{margin:0;text-align:center;}
+  .roster img{image-rendering:pixelated;width:72px;height:72px;object-fit:contain;
+    background:radial-gradient(circle,rgba(255,255,255,.05),transparent 70%);border-radius:8px;}
+  .roster figcaption{font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-top:6px;}
+  .roster figcaption b{color:var(--fg);display:block;font-size:.8rem;}
+
+  footer{position:relative;z-index:1;text-align:center;color:var(--muted);font-size:.85rem;
+    padding:40px 24px 60px;border-top:1px solid var(--panel-border);}
+  footer a{color:var(--muted);text-decoration:underline;}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+
+<div class="wrap">
+<header class="hero">
+  <p class="badgebar">
+    <span class="badge">C99 · SDL2</span>
+    <span class="badge">Linux native</span>
+    <span class="badge">50 levels</span>
+    <span class="badge">18 enemy types</span>
+  </p>
+  <h1 class="title">XQUEST</h1>
+  <img class="hero-ship" src="img/sprite_ship.png" alt="The XQuest ship sprite" width="96" height="96">
+  <p class="tagline">Mark Mackey's 1994 DOS shareware classic, ported faithfully to modern Linux.<br>
+     Same ship. Same Mucoids. Thirty years later, still going.</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/sandbranch/xquest-sdl">View on GitHub</a>
+    <a class="btn btn-ghost" href="https://github.com/sandbranch/xquest-sdl/releases">Downloads</a>
+  </div>
+</header>
+
+<main>
+
+<section style="text-align:center;">
+  <img src="img/title_screen.png" alt="The original XQuest DOS title screen"
+       style="width:100%;max-width:640px;image-rendering:pixelated;border-radius:10px;
+              border:1px solid var(--panel-border);box-shadow:0 0 40px rgba(255,95,209,.25);">
+  <p class="stamp" style="margin-top:10px;">The actual 1994 title screen, pulled straight from the original xquest.gfx data.</p>
+</section>
+
+<section class="card">
+  <h2>The story, unchanged since 1994</h2>
+  <blockquote>
+    &ldquo;The invasion fleet of the hideous Mucoids is hurtling towards the Earth,
+    intent on blasting it into tiny steaming shreds of radioactive grit, and only
+    your ship, armed with our latest top secret Super Kill-o-Zapper Atomic Phaser
+    Photon Laser Cannons can&hellip; hang on, sorry, wrong game. You're a jolly
+    little ship dingus which shoots around a rather abstract landscape collecting
+    little gem thingies, while avoiding mines. Boring, you say? Well, we kept the
+    Super Kill-o-Zapper, and added LOTS of things to blow up. Happy?&rdquo;
+    <cite> -  the original XQuest manual, Mark Mackey, 1994</cite>
+  </blockquote>
+</section>
+
+<section>
+  <h2>What's actually preserved</h2>
+  <p>This isn't a remake, a reimagining, or "inspired by." It's a line-for-line
+  faithful port: the same momentum-based flight physics, the same 50 hand-built
+  levels, the same 18 enemy AIs, the same pixel-accurate bitmask collision that
+  the original DOS code used - running natively via SDL2 instead of Mode X VGA
+  and a DOS box.</p>
+  <div class="card">
+    <h2 style="margin-top:0;">Enemies (a sample), straight from the original sprite sheet</h2>
+    <div class="roster">
+      <figure>
+        <img src="img/sprite_supercrystal.png" alt="SuperCrystal sprite">
+        <figcaption><b>SuperCrystal</b>grants a random powerup</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sprite_hibernator.png" alt="Hibernator sprite">
+        <figcaption><b>Hibernator</b>sleeps until struck, then very high HP</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sprite_meeby.png" alt="Meeby sprite">
+        <figcaption><b>Meeby</b>slow, follows the player, 2000 pts</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sprite_retaliator.png" alt="Retaliator sprite">
+        <figcaption><b>Retaliator</b>fires a burst the instant it's hit</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sprite_tribbler.png" alt="Tribbler sprite">
+        <figcaption><b>Tribbler</b>splits into 5 Tribbles on death</figcaption>
+      </figure>
+      <figure>
+        <img src="img/sprite_repulsor.png" alt="Repulsor sprite">
+        <figcaption><b>Repulsor</b>pushes you away - 7500 pts, the highest in the game</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin-top:0;">Powerups</h2>
+    <table>
+      <tr><th>Icon</th><th>Effect</th></tr>
+      <tr><td>Shield</td><td>Absorb one hit, ship survives</td></tr>
+      <tr><td>MultiFire</td><td>Each shot fans into three</td></tr>
+      <tr><td>AimedFire</td><td>Missiles auto-lead the nearest enemy</td></tr>
+      <tr><td>HeavyFire</td><td>One-hit kills, any enemy HP</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Play it</h2>
+  <p>Grab a build from the <a href="https://github.com/sandbranch/xquest-sdl/releases">Releases</a>
+  page (Linux AppImage / .deb, macOS, Windows) - every build includes the full game, ready to
+  play. Or build it yourself:</p>
+  <pre><code>git clone https://github.com/sandbranch/xquest-sdl.git
+cd xquest-sdl
+cmake -B build
+cmake --build build
+./build/xquest</code></pre>
+  <p class="stamp">Requires SDL2, CMake 3.16+, and a C99 compiler.
+  Full controls, difficulty tiers, and the complete enemy/powerup reference
+  are in the <a href="https://github.com/sandbranch/xquest-sdl#readme">README</a>.</p>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <div class="wrap">
+    XQuest is Copyright &copy; 1994–1996 Mark Mackey. This is an unofficial fan port.<br>
+    Original game: <a href="http://www.swallowtail.org/xquest/">swallowtail.org/xquest</a>
+    &nbsp;·&nbsp;
+    Play in-browser: <a href="https://archive.org/details/msdos_XQuest_1994">Internet Archive</a>
+    &nbsp;·&nbsp;
+    Port code: <a href="https://github.com/sandbranch/xquest-sdl">github.com/sandbranch/xquest-sdl</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var canvas = document.getElementById('starfield');
+  var ctx = canvas.getContext('2d');
+  var W, H, cx, cy;
+  var N = 400;
+  var stars = [];
+
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    cx = W / 2; cy = H / 2;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function reset(s){
+    s.x = (Math.random() * 2 - 1) * W;
+    s.y = (Math.random() * 2 - 1) * H;
+    s.z = Math.random() * W + 1;
+  }
+  for (var i = 0; i < N; i++){
+    var s = {}; reset(s); s.z = Math.random() * W;
+    stars.push(s);
+  }
+
+  var speed = 2.4;
+  function tick(){
+    ctx.fillStyle = 'rgba(5,4,10,0.55)';
+    ctx.fillRect(0, 0, W, H);
+    for (var i = 0; i < stars.length; i++){
+      var s = stars[i];
+      s.z -= speed;
+      if (s.z <= 1){ reset(s); s.z = W; }
+      var k = 128 / s.z;
+      var px = cx + s.x * k;
+      var py = cy + s.y * k;
+      if (px < 0 || px >= W || py < 0 || py >= H){ reset(s); continue; }
+      var size = (1 - s.z / W) * 2.4;
+      var b = Math.min(1, (1 - s.z / W) * 1.4 + 0.15);
+      ctx.fillStyle = 'rgba(234,230,255,' + b + ')';
+      ctx.fillRect(px, py, Math.max(1, size), Math.max(1, size));
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
