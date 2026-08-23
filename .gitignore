@@ -1,0 +1,30 @@
+# Build output
+build/
+build-appimage/
+obj-*/
+*.AppImage
+*.o
+*.a
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+
+# Debian packaging build byproducts (debian/control, rules, etc. are source)
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/xquest/
+debian/xquest-data/
+debian/tmp/
+
+# Original XQuest game data: copyrighted by Mark Mackey, freeware-licensed,
+# not redistributable as part of a source repo. Populate with
+# scripts/fetch-assets.sh from an adjacent ../xquest/ distribution.
+# See assets/README.
+assets/*
+!assets/README
+!assets/icons/
+!assets/icons/**

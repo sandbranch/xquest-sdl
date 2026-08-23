@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=XQuest
+GenericName=Arcade Shooter
+Comment=Top-down arcade shooter — port of XQuest v1.3 (DOS 1994)
+Exec=xquest
+Icon=xquest
+Terminal=false
+Type=Application
+Categories=Game;ArcadeGame;
+Keywords=arcade;shooter;spaceship;retro;

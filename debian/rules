@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+
+# assets/ must be populated before building.
+# Run:  scripts/fetch-assets.sh
+ASSET_DIR  = $(CURDIR)/assets
+DATA_DEST  = /usr/share/games/xquest
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@if [ ! -f "$(ASSET_DIR)/xquest.gfx" ]; then \
+	    echo ""; \
+	    echo "ERROR: Game data files not found in assets/"; \
+	    echo "       Run  scripts/fetch-assets.sh  first."; \
+	    echo ""; \
+	    exit 1; \
+	fi
+	dh_auto_configure -- \
+	    -DXQUEST_ASSET_DIR=$(DATA_DEST) \
+	    -DXQUEST_DATA_SOURCE=$(ASSET_DIR) \
+	    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	    -DCMAKE_INSTALL_PREFIX=/usr
+
+override_dh_auto_install:
+	dh_auto_install --destdir=$(CURDIR)/debian/tmp
+
+# Strip debug info into a separate -dbgsym package (handled by dh_strip).
+# lintian overrides — the data package is arch:all but contains binary data.
