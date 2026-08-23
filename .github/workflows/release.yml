@@ -1,0 +1,104 @@
+name: Release
+
+# Engine-only builds: the original XQuest game data is Mark Mackey's
+# copyrighted freeware and is never bundled here (see assets/README).
+# Every artifact requires the user to supply their own copy via
+# scripts/fetch-assets.sh or the XQUEST_DATA_DIR environment variable.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Determine tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "XQuest $TAG" \
+            --generate-notes \
+            --prerelease="$([ "${{ github.ref_type }}" = "tag" ] && echo false || echo true)" \
+            || echo "Release $TAG already exists, continuing"
+
+  linux:
+    needs: create-release
+    runs-on: ubuntu-latest
+    env:
+      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev cmake dpkg-dev
+      - name: Build AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: bash scripts/build-appimage.sh
+      - name: Build .deb
+        run: bash scripts/build-deb.sh
+      - name: Upload artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          gh release upload "$TAG" --repo "${{ github.repository }}" --clobber \
+            xquest-x86_64.AppImage \
+            build-deb/xquest_${XQUEST_VERSION}_amd64.deb
+
+  macos:
+    needs: create-release
+    runs-on: macos-latest
+    env:
+      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install sdl2
+      - name: Build .dmg
+        run: bash scripts/build-macos.sh
+      - name: Upload artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: gh release upload "$TAG" --repo "${{ github.repository }}" --clobber "XQuest-${XQUEST_VERSION}-macos.dmg"
+
+  windows:
+    needs: create-release
+    runs-on: windows-latest
+    env:
+      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SDL2 (vcpkg)
+        run: vcpkg install sdl2:x64-windows
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: pwsh -File scripts/build-windows.ps1
+      - name: Upload artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        shell: bash
+        run: gh release upload "$TAG" --repo "${{ github.repository }}" --clobber "XQuest-${XQUEST_VERSION}-Setup.exe"

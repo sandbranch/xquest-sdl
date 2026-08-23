@@ -25,9 +25,12 @@ if [[ -z "$APPIMAGETOOL" ]]; then
 fi
 
 # ── Check assets ─────────────────────────────────────────────────────────────
+# Game data is copyrighted freeware, not shipped in this repo (assets/README).
+# If it's not present, this builds an engine-only AppImage: the user supplies
+# their own XQuest data at runtime via the XQUEST_DATA_DIR env var.
 if [[ ! -f "$REPO_ROOT/assets/xquest.gfx" ]]; then
-    echo "ERROR: assets/ not populated — run scripts/fetch-assets.sh first" >&2
-    exit 1
+    echo "NOTE: assets/ not populated — building an engine-only AppImage." >&2
+    echo "      Run scripts/fetch-assets.sh first to bundle game data." >&2
 fi
 
 # ── CMake build (Release, install into AppDir) ───────────────────────────────
@@ -49,10 +52,11 @@ cp "$REPO_ROOT/debian/xquest.desktop" "$APPDIR/xquest.desktop"
 # Icon at root (appimagetool looks for <AppName>.png or .DirIcon)
 cp "$REPO_ROOT/assets/icons/xquest.png" "$APPDIR/xquest.png"
 
-# AppRun script — sets XQUEST_DATA_DIR so the binary finds data inside the image
+# AppRun script — defaults XQUEST_DATA_DIR to the bundled data (if any),
+# but lets a caller-supplied XQUEST_DATA_DIR (their own asset copy) win.
 cat > "$APPDIR/AppRun" << 'APPRUN'
 #!/bin/sh
-export XQUEST_DATA_DIR="$APPDIR/usr/share/games/xquest"
+export XQUEST_DATA_DIR="${XQUEST_DATA_DIR:-$APPDIR/usr/share/games/xquest}"
 exec "$APPDIR/usr/games/xquest" "$@"
 APPRUN
 chmod +x "$APPDIR/AppRun"

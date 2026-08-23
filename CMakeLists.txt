@@ -47,9 +47,13 @@ include(GNUInstallDirs)
 # Binary goes to /usr/games (Debian convention for games)
 install(TARGETS xquest RUNTIME DESTINATION games)
 
-# Generate startpic.raw during the build so the install step can copy it.
+# Game data (sprites/sounds/etc.) is Mark Mackey's copyrighted freeware, not
+# checked into this repo (see assets/README) and never present on a clean CI
+# checkout. Only wire up data conversion/install when a real data source is
+# actually present — CI and any engine-only build skip it entirely, and the
+# resulting binary picks up data at runtime via XQUEST_DATA_DIR (see main.c).
 find_program(PYTHON3_EXE python3)
-if(PYTHON3_EXE)
+if(PYTHON3_EXE AND EXISTS "${XQUEST_DATA_SOURCE}/startpic.pbm")
     # Generates <XQUEST_DATA_SOURCE>/startpic.raw alongside the source .pbm.
     set(STARTPIC_RAW "${XQUEST_DATA_SOURCE}/startpic.raw")
     add_custom_command(
@@ -63,16 +67,14 @@ if(PYTHON3_EXE)
     )
     add_custom_target(startpic_raw ALL DEPENDS "${STARTPIC_RAW}")
     add_dependencies(xquest startpic_raw)
-endif()
 
-# Read-only game data  → share/games/xquest
-foreach(f xquest.gfx xquest.enm xquest.fnt xquest2.fnt xquest.snd)
-    install(FILES "${XQUEST_DATA_SOURCE}/${f}"
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/games/xquest"
-    )
-endforeach()
-if(PYTHON3_EXE)
-    install(FILES "${XQUEST_DATA_SOURCE}/startpic.raw"
+    # Read-only game data  → share/games/xquest
+    foreach(f xquest.gfx xquest.enm xquest.fnt xquest2.fnt xquest.snd)
+        install(FILES "${XQUEST_DATA_SOURCE}/${f}"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/games/xquest"
+        )
+    endforeach()
+    install(FILES "${STARTPIC_RAW}"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/games/xquest"
     )
 endif()
