@@ -236,6 +236,7 @@ Score values range from 200 (Grunger) to 7500 (Repulsor). Meeby is worth
 - **Version ported:** XQuest 1.3
 - **Year:** 1994–1996
 - **Platform:** DOS, Mode X VGA (320×240)
+- **Original site:** [swallowtail.org/xquest](http://www.swallowtail.org/xquest/)
 
 The original shareware package and its source code were released by Mark
 Mackey. If you enjoy the game, the spirit of the original shareware model

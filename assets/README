@@ -1,29 +1,46 @@
-This directory holds the original XQuest v1.3 game data files required
-to build and run xquest-sdl.
+This directory holds the original XQuest v1.3 game data files.
 
-The data files are NOT stored in git (they are gitignored) because they
-are copyrighted by Mark Mackey and carry a custom freeware licence that
-does not permit redistribution as part of a source repository.
+These ARE checked into git. Mark Mackey's original license (see
+LICENSE.DOC in the original distribution, quoted in this repo's LICENSE)
+explicitly permits free redistribution:
 
-To populate this directory, run:
+    "You are free to upload this software to an electronic bulletin
+    board (BBS), ftp site or other network and to make copies to give
+    to your friends, so long as all of the files in the original
+    distribution of XQuest are distributed together."
+
+This repo bundles the game DATA (not the original Pascal source/binary,
+which this port doesn't need or redistribute) so that a clone or a
+release download is a complete, playable game — non-commercial, with
+full attribution to Mark Mackey, exactly as the license requires.
+
+Bundled files
+-------------
+  xquest.gfx    — all sprites (ship, enemies, objects, fonts, gates)
+  xquest.enm    — binary enemy definitions
+  xquest.fnt    — small in-game status-bar font
+  xquest2.fnt   — large Comix menu font
+  xquest.snd    — raw 8-bit 11025 Hz mono PCM sound effects
+  startpic.pbm  — title-screen planar bitmap (startpic.raw is generated
+                  from it at build time by tools/convert_pbm.py)
+
+Not bundled (gitignored)
+-------------------------
+  *.json                 — this project's own decoded/human-readable
+                            dumps from tools/decode_assets.py. Redundant
+                            with the binary files above; the compiled
+                            engine never reads them.
+  config.json/.cfg,
+  hiscores.json/.scr      — personal save state, not game content.
+
+To refresh from a newer or different original distribution, run:
 
     scripts/fetch-assets.sh
 
-That script copies the required files from the adjacent ../xquest/
-directory (the original DOS source/binary distribution).
+That script copies the required files from an adjacent ../xquest/
+directory (an original DOS source/binary distribution).
 
-Required files
---------------
-  xquest.gfx   — all sprites (ship, enemies, objects, fonts, gates)
-  xquest.enm   — binary enemy definitions
-  xquest.fnt   — game font
-  xquest.snd   — raw 8-bit 11025 Hz mono PCM sound effects
-  startpic.pbm — title-screen planar bitmap (convert_pbm.py produces .raw)
-
-Optional but useful
--------------------
-  xquest.scr   — initial empty high-score table (created by game if absent)
-  xquest.cfg   — default configuration (created by game if absent)
-
-The original XQuest distribution can be downloaded from various freeware
-archives; search for "XQuest 1.3 Mark Mackey".
+A separate, complete archival copy of the original XQuest distribution
+(source, .exe, docs — everything) is attached to a dedicated GitHub
+Release for preservation purposes; it is not part of any installable
+build. See the repository's Releases page.

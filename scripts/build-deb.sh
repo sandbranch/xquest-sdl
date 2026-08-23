@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
-# Build an engine-only .deb (no copyrighted game data — see assets/README).
-# For a full package with bundled data, use `dpkg-buildpackage` with debian/
-# after running scripts/fetch-assets.sh.
+# Build a complete, playable .deb — the SDL2 engine plus the bundled
+# XQuest game data (see assets/README: Mark Mackey's license permits this).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build-deb"
-VERSION="${XQUEST_VERSION:-0.0.0}"
+DATA_DEST="/usr/share/games/xquest"
+
+RAW_VERSION="${XQUEST_VERSION:-0.0.0}"
+RAW_VERSION="${RAW_VERSION#v}"
+# Debian policy: upstream_version must start with a digit.
+if [[ "$RAW_VERSION" =~ ^[0-9] ]]; then
+    VERSION="$RAW_VERSION"
+else
+    VERSION="0.0.0+${RAW_VERSION}"
+fi
+
 ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 PKGROOT="$BUILD_DIR/xquest_${VERSION}_${ARCH}"
 
@@ -16,6 +25,8 @@ mkdir -p "$PKGROOT/DEBIAN"
 cmake -B "$BUILD_DIR/cmake" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DXQUEST_ASSET_DIR="$DATA_DEST" \
+    -DXQUEST_DATA_SOURCE="$REPO_ROOT/assets" \
     "$REPO_ROOT"
 cmake --build "$BUILD_DIR/cmake" --parallel
 DESTDIR="$PKGROOT" cmake --install "$BUILD_DIR/cmake"
@@ -29,11 +40,10 @@ Architecture: ${ARCH}
 Depends: libsdl2-2.0-0
 Maintainer: sandbranch <sandquist@gmail.com>
 Homepage: https://github.com/sandbranch/xquest-sdl
-Description: XQuest arcade shooter — SDL2 port for Linux (engine only)
- A faithful SDL2 port of Mark Mackey's 1994 DOS shareware classic XQuest.
- This package contains the game engine only — it does not include the
- original copyrighted game data. Point the XQUEST_DATA_DIR environment
- variable at your own legally-obtained copy of the XQuest 1.3 data files.
+Description: XQuest arcade shooter — SDL2 port for Linux
+ A faithful SDL2 port of Mark Mackey's 1994 DOS shareware classic XQuest,
+ including the original game data, redistributed under Mark Mackey's
+ freeware license (see /usr/share/doc/xquest/copyright).
 EOF
 
 dpkg-deb --build --root-owner-group "$PKGROOT"

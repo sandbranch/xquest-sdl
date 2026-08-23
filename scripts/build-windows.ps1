@@ -1,5 +1,5 @@
-# Build xquest.exe and package a Windows installer via NSIS.
-# Engine only -- no copyrighted game data bundled (see assets/README).
+# Build xquest.exe and package a Windows installer via NSIS, bundling the
+# game data from assets/ (see assets/README).
 # Expects: cmake, a VS toolchain, vcpkg (with VCPKG_INSTALLATION_ROOT set),
 # and makensis on PATH.
 $ErrorActionPreference = "Stop"
@@ -29,6 +29,12 @@ if (-not $Sdl2Dll) {
     throw "SDL2.dll not found under vcpkg installed\x64-windows\bin -- did 'vcpkg install sdl2:x64-windows' run?"
 }
 Copy-Item $Sdl2Dll.FullName "$StageDir\SDL2.dll"
+
+$DataDir = Join-Path $StageDir "data"
+New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
+foreach ($f in "xquest.gfx", "xquest.enm", "xquest.fnt", "xquest2.fnt", "xquest.snd", "startpic.raw") {
+    Copy-Item (Join-Path $RepoRoot "assets\$f") (Join-Path $DataDir $f)
+}
 
 $OutName = "XQuest-$Version-Setup.exe"
 $OutPath = Join-Path $RepoRoot $OutName

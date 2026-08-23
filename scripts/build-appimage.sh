@@ -25,9 +25,9 @@ if [[ -z "$APPIMAGETOOL" ]]; then
 fi
 
 # ── Check assets ─────────────────────────────────────────────────────────────
-# Game data is copyrighted freeware, not shipped in this repo (assets/README).
-# If it's not present, this builds an engine-only AppImage: the user supplies
-# their own XQuest data at runtime via the XQUEST_DATA_DIR env var.
+# Game data ships in this repo's assets/ (see assets/README). If someone has
+# stripped it out locally, this still builds — an engine-only AppImage that
+# needs XQUEST_DATA_DIR pointed at a data copy at runtime.
 if [[ ! -f "$REPO_ROOT/assets/xquest.gfx" ]]; then
     echo "NOTE: assets/ not populated — building an engine-only AppImage." >&2
     echo "      Run scripts/fetch-assets.sh first to bundle game data." >&2

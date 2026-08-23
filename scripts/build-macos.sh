@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build XQuest.app and package it as a .dmg on macOS.
-# Engine-only — no copyrighted game data bundled (see assets/README).
+# Build XQuest.app (with bundled game data — see assets/README) and package
+# it as a .dmg on macOS.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,15 +10,29 @@ VERSION="${XQUEST_VERSION:-0.0.0}"
 DMG="$REPO_ROOT/XQuest-${VERSION}-macos.dmg"
 
 rm -rf "$BUILD_DIR" "$DMG"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/data"
 
 cmake -B "$BUILD_DIR/cmake" -DCMAKE_BUILD_TYPE=Release "$REPO_ROOT"
 cmake --build "$BUILD_DIR/cmake" --parallel
 
-cp "$BUILD_DIR/cmake/xquest" "$APP/Contents/MacOS/xquest"
+# Real binary goes in as xquest-bin; CFBundleExecutable is a tiny launcher
+# script (below) that points XQUEST_DATA_DIR at the bundle's own Resources,
+# so the .app plays correctly no matter where the user drags it.
+cp "$BUILD_DIR/cmake/xquest" "$APP/Contents/MacOS/xquest-bin"
+for f in xquest.gfx xquest.enm xquest.fnt xquest2.fnt xquest.snd startpic.raw; do
+    cp "$REPO_ROOT/assets/$f" "$APP/Contents/Resources/data/$f"
+done
 if [[ -f "$REPO_ROOT/assets/icons/xquest_256.png" ]]; then
     cp "$REPO_ROOT/assets/icons/xquest_256.png" "$APP/Contents/Resources/xquest.png"
 fi
+
+cat > "$APP/Contents/MacOS/xquest" << 'LAUNCHER'
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export XQUEST_DATA_DIR="${XQUEST_DATA_DIR:-$DIR/../Resources/data}"
+exec "$DIR/xquest-bin" "$@"
+LAUNCHER
+chmod +x "$APP/Contents/MacOS/xquest"
 
 cat > "$APP/Contents/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -39,12 +53,12 @@ cat > "$APP/Contents/Info.plist" << EOF
 EOF
 
 # Bundle SDL2.framework/dylib so the app runs without Homebrew SDL2 installed.
-SDL2_LIB="$(otool -L "$APP/Contents/MacOS/xquest" | awk '/libSDL2.*dylib/{print $1; exit}')"
+SDL2_LIB="$(otool -L "$APP/Contents/MacOS/xquest-bin" | awk '/libSDL2.*dylib/{print $1; exit}')"
 if [[ -n "${SDL2_LIB:-}" && -f "$SDL2_LIB" ]]; then
     mkdir -p "$APP/Contents/Frameworks"
     cp "$SDL2_LIB" "$APP/Contents/Frameworks/"
     install_name_tool -change "$SDL2_LIB" "@executable_path/../Frameworks/$(basename "$SDL2_LIB")" \
-        "$APP/Contents/MacOS/xquest"
+        "$APP/Contents/MacOS/xquest-bin"
 fi
 
 hdiutil create -volname "XQuest" -srcfolder "$APP" -ov -format UDZO "$DMG"

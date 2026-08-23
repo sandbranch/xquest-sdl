@@ -20,11 +20,9 @@ debian/xquest/
 debian/xquest-data/
 debian/tmp/
 
-# Original XQuest game data: copyrighted by Mark Mackey, freeware-licensed,
-# not redistributable as part of a source repo. Populate with
-# scripts/fetch-assets.sh from an adjacent ../xquest/ distribution.
-# See assets/README.
-assets/*
-!assets/README
-!assets/icons/
-!assets/icons/**
+# assets/: runtime game data IS checked in (see assets/README — Mark
+# Mackey's license explicitly permits redistribution). What stays out:
+# personal save state, and this project's own decoded-JSON tool output
+# (redundant with the binary originals; the engine never reads it).
+assets/*.json
+assets/startpic.raw

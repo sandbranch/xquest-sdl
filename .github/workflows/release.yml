@@ -1,9 +1,8 @@
 name: Release
 
-# Engine-only builds: the original XQuest game data is Mark Mackey's
-# copyrighted freeware and is never bundled here (see assets/README).
-# Every artifact requires the user to supply their own copy via
-# scripts/fetch-assets.sh or the XQUEST_DATA_DIR environment variable.
+# Builds the full, playable game for each platform: the SDL2 engine plus
+# the bundled XQuest game data (see assets/README — redistribution is
+# permitted under Mark Mackey's original freeware license).
 
 on:
   push:
@@ -63,7 +62,7 @@ jobs:
         run: |
           gh release upload "$TAG" --repo "${{ github.repository }}" --clobber \
             xquest-x86_64.AppImage \
-            build-deb/xquest_${XQUEST_VERSION}_amd64.deb
+            build-deb/*.deb
 
   macos:
     needs: create-release

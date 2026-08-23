@@ -7,17 +7,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 find_package(SDL2 REQUIRED)
 
 # ── Runtime asset path (baked into the binary) ───────────────────────────────
-# For development: points at the adjacent ../xquest/ original distribution.
-# For packaging:   set to the installed data dir, e.g. /usr/share/games/xquest.
-set(XQUEST_ASSET_DIR "${CMAKE_SOURCE_DIR}/../xquest"
+# Defaults to the game data bundled in this repo's assets/ dir. Override with
+# -DXQUEST_ASSET_DIR=... to point at an installed data dir instead, e.g.
+# /usr/share/games/xquest for packaging.
+set(XQUEST_ASSET_DIR "${CMAKE_SOURCE_DIR}/assets"
     CACHE PATH "Runtime directory the game searches for data files")
 
 # ── Data-source directory for cmake --install ─────────────────────────────────
-# Defaults to XQUEST_ASSET_DIR.  Set to ${CMAKE_SOURCE_DIR}/assets when
-# packaging so cmake installs from the pre-populated assets/ tree rather
-# than from the adjacent original distribution.
-set(XQUEST_DATA_SOURCE "${XQUEST_ASSET_DIR}"
-    CACHE PATH "Source directory for 'cmake --install' game data (defaults to XQUEST_ASSET_DIR)")
+# Defaults to the bundled assets/. Packaging scripts that bake a different
+# runtime XQUEST_ASSET_DIR (e.g. /usr/share/games/xquest) still set this to
+# the actual on-disk source to install from.
+set(XQUEST_DATA_SOURCE "${CMAKE_SOURCE_DIR}/assets"
+    CACHE PATH "Source directory for 'cmake --install' game data (defaults to the bundled assets/)")
 
 # ── Build ──────────────────────────────────────────────────────────────────────
 add_executable(xquest
@@ -39,7 +40,11 @@ target_link_libraries(xquest PRIVATE ${SDL2_LIBRARIES} m)
 target_compile_definitions(xquest PRIVATE
     ASSET_DIR="${XQUEST_ASSET_DIR}"
 )
-target_compile_options(xquest PRIVATE -Wall -Wextra -Wpedantic)
+if(MSVC)
+    target_compile_options(xquest PRIVATE /W4)
+else()
+    target_compile_options(xquest PRIVATE -Wall -Wextra -Wpedantic)
+endif()
 
 # ── Install ────────────────────────────────────────────────────────────────────
 include(GNUInstallDirs)
