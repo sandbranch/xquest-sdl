@@ -5,7 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-24
+
+First playable release: a faithful, complete port of XQuest v1.3 to
+Linux/SDL2.
+
 ### Added
+- All 18 enemy types with original AI, collision, and scoring behaviour
+- 8-channel PCM audio mixer (`xquest.snd`, 11025 Hz mono)
+- High-score table, reading/writing the original `xquest.scr` binary format
+- 3-D perspective starfield background and animated title screen
+- Full keyboard, mouse, and joystick input
+- Menu mouse support: hover to highlight, click to activate, scroll wheel
+  to cycle items
+- Wall-contact destruction on Timid+ difficulty, matching the original
+- Homepage and README gameplay screenshots of the running SDL2 port
 
 #### Step 1 - Build system + SDL2 skeleton
 - `CMakeLists.txt` - CMake 3.16+ build, C99, SDL2, `XQUEST_ASSET_DIR` cache variable
