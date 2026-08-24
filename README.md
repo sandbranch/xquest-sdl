@@ -28,13 +28,6 @@ original docs. No DOSBox required.
 >
 > - *the original XQuest manual, Mark Mackey, 1994*
 
-Fun fact: Mark Mackey himself informally called this release **"The
-Long-awaited XQuest 2"** on his own page - same game, same version
-(1.3), just his own excited branding for the update that added
-two-player support, three new enemies, and the pixel-collision fix.
-There's no separate "XQuest 2" sequel floating around out there; this
-is it.
-
 > All gameplay, levels, and original assets are the work of Mark Mackey.
 > This port exists so the game can keep running on hardware Mark never
 > imagined, without an emulator in between.
