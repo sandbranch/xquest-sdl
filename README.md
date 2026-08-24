@@ -4,6 +4,10 @@
   <img src="docs/img/title_screen.png" alt="The original XQuest DOS title screen" width="480">
 </p>
 
+<p align="center">
+  <img src="docs/img/gameplay_2.png" alt="XQuest SDL2 port gameplay, ship dodging crystals near an enemy" width="480">
+</p>
+
 I first played **XQuest** as DOS shareware sometime in the mid-90s, and it
 never really left. Different machines, different decades, same jolly
 little ship dingus flying around blowing things up for gem thingies. This
