@@ -29,6 +29,9 @@ static void usage(const char *prog) {
            "  --play [FILE]     play back a demo (default: xquest.dmo in the\n"
            "                    config dir) and return to the menu\n"
            "  --record [FILE]   record the next game to FILE\n"
+           "  --dump-frames F   with --play, write raw 320x240 BGRA frames to F\n"
+           "                    (or - for stdout) as fast as possible, for\n"
+           "                    encoding to video. Pipe into ffmpeg.\n"
            "  --help            show this message\n\n"
            "With no options the game starts normally. A demo file also drives\n"
            "attract mode: the menu plays it after %d seconds idle.\n",
@@ -40,7 +43,7 @@ int main(int argc, char **argv) {
     const char *asset_dir = getenv("XQUEST_DATA_DIR");
     if (!asset_dir || asset_dir[0] == '\0') asset_dir = ASSET_DIR;
 
-    const char *play_arg = NULL, *record_arg = NULL;
+    const char *play_arg = NULL, *record_arg = NULL, *dump_arg = NULL;
     bool want_play = false, want_record = false;
     for (int i = 1; i < argc; i++) {
         /* An optional filename may follow; anything starting with '-' is the
@@ -51,6 +54,12 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--record") == 0) {
             want_record = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') record_arg = argv[++i];
+        } else if (strcmp(argv[i], "--dump-frames") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "xquest: --dump-frames needs a file (or -)\n");
+                return 1;
+            }
+            dump_arg = argv[++i];
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(argv[0]);
             return 0;
@@ -63,6 +72,21 @@ int main(int argc, char **argv) {
     if (want_play && want_record) {
         fprintf(stderr, "xquest: --play and --record are mutually exclusive\n");
         return 1;
+    }
+    if (dump_arg && !want_play) {
+        fprintf(stderr, "xquest: --dump-frames needs --play\n");
+        return 1;
+    }
+
+    /* Frame dump: the renderer's own 320x240 buffer, so the capture is
+       pixel-exact and never touches anything else on screen. */
+    FILE *dump = NULL;
+    if (dump_arg) {
+        dump = (strcmp(dump_arg, "-") == 0) ? stdout : fopen(dump_arg, "wb");
+        if (!dump) {
+            fprintf(stderr, "xquest: cannot write frames to %s\n", dump_arg);
+            return 1;
+        }
     }
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
@@ -242,6 +266,9 @@ int main(int argc, char **argv) {
             }
 
             uint32_t now = SDL_GetTicks();
+            /* Dumping runs flat out rather than in real time: exactly one
+               tick per rendered frame, no waiting on the clock. */
+            if (dump) last_tick = now - TICK_MS;
             if (paused || quit_confirm) {
                 /* Drain last_tick so resuming doesn't avalanche ticks */
                 last_tick = now;
@@ -386,6 +413,8 @@ int main(int argc, char **argv) {
             }
             render_hud(&r, &a, &gs);
             renderer_present(&r);
+            if (dump)
+                fwrite(r.buf, sizeof(uint32_t), RENDER_W * RENDER_H, dump);
         }
 
         input_shutdown(&inp);
@@ -427,6 +456,8 @@ int main(int argc, char **argv) {
     /* The original wrote xquest.cfg unconditionally on exit (WriteDefaults at
        the end of xquest.pas), which is what creates the file on a first run. */
     save_settings(&cfg, cfg_path);
+
+    if (dump && dump != stdout) fclose(dump);
 
     renderer_destroy(&r);
     audio_free();

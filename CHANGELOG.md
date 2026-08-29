@@ -12,6 +12,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Attract mode: the menu plays a demo after 30 seconds idle, matching
   `MenuTimeOut` in the original. Enabled only when a demo file exists at
   `xquest.dmo` in the config dir, so a fresh install simply waits.
+- `--dump-frames FILE` writes the renderer's own 320x240 buffer as raw
+  BGRA while replaying a demo, running flat out rather than in real time,
+  for piping into ffmpeg. Captures are pixel-exact and never touch
+  anything else on screen.
+- Gameplay video on the homepage, captured that way from a recorded demo.
 - Demos replay deterministically: the recorded seed and difficulty are
   restored, and each frame stores the ship velocity after braking but
   before the speed clamp, exactly where the original captured it.

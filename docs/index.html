@@ -70,6 +70,10 @@
 
   .stamp{font-family:var(--mono);color:var(--muted);font-size:.85rem;}
 
+  .demo-video{width:100%;max-width:640px;display:block;margin:0 auto;
+    image-rendering:pixelated;border-radius:10px;border:1px solid var(--panel-border);
+    box-shadow:0 0 40px rgba(95,225,255,.22);background:#000;}
+
   .hero-ship{image-rendering:pixelated;display:block;margin:0 auto 8px;filter:drop-shadow(0 0 14px rgba(95,225,255,.5));}
   .roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;margin-top:6px;}
   .roster figure{margin:0;text-align:center;}
@@ -135,6 +139,22 @@
       <figcaption class="stamp" style="margin-top:8px;">Missiles away, weaving through the crystal field.</figcaption>
     </figure>
   </div>
+</section>
+
+<section>
+  <h2>Twenty seconds of it, actually running</h2>
+  <video class="demo-video" autoplay loop muted playsinline preload="metadata"
+         poster="video/gameplay_poster.png">
+    <source src="video/gameplay.webm" type="video/webm">
+    <source src="video/gameplay.mp4" type="video/mp4">
+    Your browser cannot play the clip. The
+    <a href="video/gameplay.mp4">MP4 is here</a>.
+  </video>
+  <p class="stamp" style="text-align:center;margin-top:10px;">
+    Level 4 or thereabouts: crystals, mines, and the exit gate up top. Captured
+    straight from the port's own demo playback, frame by frame at the original
+    320&times;240, so it is exactly what the engine draws.
+  </p>
 </section>
 
 <section class="card">
