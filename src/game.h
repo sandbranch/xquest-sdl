@@ -179,8 +179,10 @@ void game_init(GameState *g, int sprite_w, int sprite_h, uint32_t rng_seed);
    gate_left_w / gate_right_w are the gate sprite widths from Assets. */
 void level_init(GameState *g, int gate_left_w, int gate_right_w);
 
-/* Advance one tick. inp_dx/dy from keyboard/mouse. brake halves velocity. */
-void game_tick(GameState *g, int inp_dx, int inp_dy, bool brake);
+/* Advance one tick. inp_dx/dy from keyboard/mouse. brake halves velocity.
+   Needs the assets for the ship's collision mask: wall contact is
+   pixel-accurate, as in the original. */
+void game_tick(GameState *g, const Assets *a, int inp_dx, int inp_dy, bool brake);
 
 /* Run one tick of enemy spawning and movement. */
 void entities_tick(GameState *g, const Assets *a);

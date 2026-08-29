@@ -31,6 +31,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   player-modified file byte-for-byte.
 
 ### Fixed
+- Wall collision was a plain bounding-box test, so the ship died whenever
+  its box touched a wall. The original gates every wall test behind a
+  pixel-accurate mask check (WallCollideHor/WallCollideVer), and the ship
+  is a pointed sprite whose box juts past its pixels, so the port was
+  killing players on grazes the original forgave.
 - Closing the window during a game returned to the menu instead of
   quitting, because the game loop did not record why it stopped.
 - High scores were written next to the game data, which is read-only on a

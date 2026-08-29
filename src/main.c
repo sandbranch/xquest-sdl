@@ -299,7 +299,7 @@ int main(int argc, char **argv) {
                         but |= DEMO_BUT_FIRE_HELD;
                     }
                     if (want_bomb) { fire_smart_bomb(&gs, &a); but |= DEMO_BUT_BOMB; }
-                    game_tick(&gs, dx, dy, brake);
+                    game_tick(&gs, &a, dx, dy, brake);
 
                     /* One frame per ticked frame, on both paths, so a
                        recording and its playback stay in step. */

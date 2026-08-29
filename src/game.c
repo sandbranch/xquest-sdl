@@ -193,8 +193,31 @@ void level_init(GameState *g, int gate_left_w, int gate_right_w) {
     }
 }
 
-void game_tick(GameState *g, int inp_dx, int inp_dy, bool brake) {
+/* Any ship pixels in mask rows [from..to]? Pascal WallCollideVer. */
+static bool wall_hit_ver(const uint32_t *mask, int h, int from, int to) {
+    if (!mask) return true;   /* no mask: fall back to the bounding box */
+    if (from < 0) from = 0;
+    if (to > h - 1) to = h - 1;
+    for (int i = from; i <= to; i++)
+        if (mask[i]) return true;
+    return false;
+}
+
+/* Any ship pixels in the columns the wall occupies? Pascal WallCollideHor.
+   Bit 31 is column 0, so the column masks are the same expressions the
+   original used. */
+static bool wall_hit_hor(const uint32_t *mask, int h, uint32_t wallmask) {
+    if (!mask) return true;
+    for (int i = 0; i < h; i++)
+        if (mask[i] & wallmask) return true;
+    return false;
+}
+
+void game_tick(GameState *g, const Assets *a, int inp_dx, int inp_dy, bool brake) {
     Ship *s = &g->ship;
+    /* The rotation frame from the previous tick, which is what the original
+       tests against: ShipDir is only recomputed further down. */
+    const uint32_t *smask = a ? a->ship[s->dir].mask : NULL;
 
     s->delx += inp_dx;
     s->dely += inp_dy;
@@ -231,13 +254,34 @@ void game_tick(GameState *g, int inp_dx, int inp_dy, bool brake) {
        (matches Pascal CheckWallCollisions: DiffLevel > 1 → ShipDestroyed). */
     bool wall_bounce = (g->diff_level == 0) || (g->powerup_timer[PU_SHIELD] > 0);
 
+    /* Each wall only bites where actual ship pixels reach it. The bounding
+       box crossing is just the cheap pre-check, exactly as in the original -
+       a bare box test kills the player on grazes the original forgave. */
     if (s->x < SHIP_MIN_X) {
-        s->x = SHIP_MIN_X; s->sx = s->x * 64;
-        if (wall_bounce) s->delx = abs(s->delx); else g->ship_destroyed = true;
+        /* Columns 0..m lie left of the wall. Past 31 the whole row is inside
+           it; a negative m means none of it is. */
+        int m = SHIP_MIN_X - s->x - 1;
+        uint32_t wm = (m >= 31) ? 0xFFFFFFFFu
+                    : (m <  0)  ? 0u
+                                : ~((1u << (31 - m)) - 1u);
+        if (wm && wall_hit_hor(smask, s->h, wm)) {
+            s->x = SHIP_MIN_X; s->sx = s->x * 64;
+            if (wall_bounce) s->delx = abs(s->delx); else g->ship_destroyed = true;
+        }
     }
+    /* The original pre-checks xbr >= ShipMaxX-10 and lets the column mask
+       filter; since ship pixels only occupy columns 0..w-1, no hit is
+       possible until xbr passes the wall, so this tighter test is equivalent. */
     if (s->xbr > SHIP_MAX_X) {
-        s->x = SHIP_MAX_X - s->w; s->sx = s->x * 64;
-        if (wall_bounce) s->delx = -abs(s->delx); else g->ship_destroyed = true;
+        /* Columns k+1..31 lie right of the wall. */
+        int k = SHIP_MAX_X - s->x;
+        uint32_t wm = (k <  0)  ? 0xFFFFFFFFu
+                    : (k >= 31) ? 0u
+                                : (1u << (31 - k)) - 1u;
+        if (wm && wall_hit_hor(smask, s->h, wm)) {
+            s->x = SHIP_MAX_X - s->w; s->sx = s->x * 64;
+            if (wall_bounce) s->delx = -abs(s->delx); else g->ship_destroyed = true;
+        }
     }
     if (s->y < SHIP_MIN_Y) {
         /* Allow exit through open gate if ship is horizontally inside the opening */
@@ -247,14 +291,16 @@ void game_tick(GameState *g, int inp_dx, int inp_dy, bool brake) {
         if (in_gate) {
             if (s->y < 0)
                 g->level_complete = true;
-        } else {
+        } else if (wall_hit_ver(smask, s->h, 0, SHIP_MIN_Y - s->y - 1)) {
             s->y = SHIP_MIN_Y; s->sy = s->y * 64;
             if (wall_bounce) s->dely = abs(s->dely); else g->ship_destroyed = true;
         }
     }
     if (s->ybr > SHIP_MAX_Y) {
-        s->y = SHIP_MAX_Y - s->h; s->sy = s->y * 64;
-        if (wall_bounce) s->dely = -abs(s->dely); else g->ship_destroyed = true;
+        if (wall_hit_ver(smask, s->h, SHIP_MAX_Y - s->y + 1, s->h - 1)) {
+            s->y = SHIP_MAX_Y - s->h; s->sy = s->y * 64;
+            if (wall_bounce) s->dely = -abs(s->dely); else g->ship_destroyed = true;
+        }
     }
     s->xbr = s->x + s->w - 1;
     s->ybr = s->y + s->h - 1;
