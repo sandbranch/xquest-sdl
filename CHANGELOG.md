@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Settings now persist between runs, in the original `xquest.cfg` format.
+  Difficulty chosen in the menu is restored on next launch instead of
+  resetting to Average every time.
+- The config file is written to a per-user data directory
+  (`~/.local/share/xquest/` on Linux, `%APPDATA%` on Windows,
+  `~/Library/Application Support` on macOS), so it works from a read-only
+  install. An existing writable `xquest.cfg` beside the game data is used
+  in place instead, preserving portable and original DOS-style installs.
+  `$XQUEST_CONFIG_DIR` overrides both.
+- Fields the port has no UI for (input sensitivity, key bindings, joystick
+  calibration, Sound Blaster port/IRQ/DMA) are parsed and written back
+  unchanged, so round-tripping an original file loses nothing. A load/save
+  cycle reproduces both the shipped `distrib/xquest.cfg` and a
+  player-modified file byte-for-byte.
+
+### Fixed
+- `CLAUDE.md` described `xquest.cfg` as a binary format. It is plain text
+  with CRLF line endings and a `value label` per line.
+
 ## [0.8.0] - 2026-08-24
 
 First playable release: a faithful, complete port of XQuest v1.3 to

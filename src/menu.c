@@ -259,14 +259,14 @@ static int item_at(int ly) {
 }
 
 int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
-             HiTable *ht, const char *hi_path) {
+             HiTable *ht, const char *hi_path, int *diff_io) {
     (void)hi_path;
 
     Starfield sf;
     starfield_init(&sf, 0);
 
     int sel  = 0;   /* 0=Start, 1=Difficulty, 2=Hall of Fame, 3=Quit */
-    int diff = 2;   /* Average */
+    int diff = *diff_io;   /* seeded from the saved config */
     uint32_t last_tick = SDL_GetTicks();
     int color_cycle = 0;
     int result = -1;
@@ -365,6 +365,7 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
         SDL_Delay(1);
     }
 done:
+    *diff_io = diff;   /* keep the player's choice even if they quit here */
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetRelativeMouseMode(SDL_TRUE);
     return result;

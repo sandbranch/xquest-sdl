@@ -48,7 +48,7 @@ Original resolution: 320×240 (Mode X VGA), split into a 320×217 game area and 
 | Mouse | INT 33h delta motion | SDL_GetRelativeMouseState |
 | Joystick | Analog port $201 | SDL_Joystick / SDL_GameController |
 | Timer | PZT timer, ~67 fps target | SDL_GetTicks64, fixed timestep loop |
-| Config | xquest.cfg binary | Same binary layout, same path |
+| Config | xquest.cfg text (CRLF, `value label` lines) | Same layout, per-user data dir |
 | High scores | xquest.scr binary | Same binary layout, same path |
 | Demo | xquest.dmo binary | Same binary layout, same path |
 
@@ -129,5 +129,6 @@ assets/                  -- symlink or copy from ../xquest/
 
 - Gameplay physics and AI behaviour - stay faithful to the Pascal source
 - Level data (the `probs` arrays in xqvars.pas) - copy verbatim as C arrays
-- Binary file formats for cfg/scr/dmo - keep compatibility with original files
+- File formats for cfg/scr/dmo - keep compatibility with original files.
+  Note cfg is plain CRLF text, not binary; scr and dmo are binary.
 - The 320×240 logical resolution - scale at display time only

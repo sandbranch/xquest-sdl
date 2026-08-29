@@ -8,12 +8,19 @@
 #include "hiscore.h"
 #include "starfield.h"
 #include "audio.h"
+#include "config.h"
 
 #ifndef ASSET_DIR
 #define ASSET_DIR "../xquest"
 #endif
 
 #define TICK_MS 15   /* ~67 fps fixed timestep */
+
+/* Settings are a convenience, never a reason to fail: warn once and carry on. */
+static void save_settings(const Config *cfg, const char *path) {
+    if (!config_save(cfg, path))
+        fprintf(stderr, "xquest: could not save settings to %s\n", path);
+}
 
 int main(void) {
     /* AppImage / portable override: XQUEST_DATA_DIR env var takes precedence. */
@@ -58,6 +65,14 @@ int main(void) {
     /* gamespeed per difficulty: Wimp→45, Timid→54, Average→64, Tricky→77, Inhuman→96 */
     static const int diff_speed[5] = {45, 54, 64, 77, 96};
 
+    /* Player settings, persisted between runs in the original xquest.cfg
+       format. A missing or unreadable file just means factory defaults. */
+    Config cfg;
+    char   cfg_path[512];
+    config_path(cfg_path, sizeof(cfg_path), asset_dir);
+    config_load(&cfg, cfg_path);
+    int diff = cfg.player[0].difficulty;
+
     /* High score table - load once, shared across sessions */
     HiTable ht;
     char hi_path[512];
@@ -66,8 +81,16 @@ int main(void) {
 
     /* ---- Outer loop: menu → game → game-over → menu ---- */
     for (;;) {
-        int diff = run_menu(&a, &r, win, &ht, hi_path);
-        if (diff < 0) break;   /* user chose Quit or closed window */
+        int chosen = run_menu(&a, &r, win, &ht, hi_path, &diff);
+
+        /* Save as soon as it changes, so the setting survives a crash or a
+           kill rather than only a clean exit. */
+        if (diff != cfg.player[0].difficulty) {
+            cfg.player[0].difficulty = diff;
+            save_settings(&cfg, cfg_path);
+        }
+
+        if (chosen < 0) break;   /* user chose Quit or closed window */
 
         Input     inp;
         GameState gs;
@@ -232,6 +255,10 @@ int main(void) {
             run_game_over(&a, &r, &ht, hi_path, gs.diff_level, gs.score, gs.level);
         /* If not game_over (player pressed Escape), loop back to menu silently */
     }
+
+    /* The original wrote xquest.cfg unconditionally on exit (WriteDefaults at
+       the end of xquest.pas), which is what creates the file on a first run. */
+    save_settings(&cfg, cfg_path);
 
     renderer_destroy(&r);
     audio_free();
