@@ -226,6 +226,27 @@ Score values range from 200 (Grunger) to 7500 (Repulsor). Meeby is worth
 
 ---
 
+## Tests
+
+```
+cmake -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Three suites: the `xquest.cfg` round-trip against the original's exact
+bytes, the `.dmo` format plus replay determinism, and an end-to-end
+replay of `tests/data/reference.dmo` through the real engine.
+
+That last one is the interesting one. A demo stores only the player's
+inputs, so everything else about the run is the engine's doing: replaying
+a recording and checking the score, levels and crystals come out the same
+pins the physics and the random number stream. If it fails after a
+deliberate gameplay change the recording is stale, not wrong. Re-record
+with `--record` and update the expectations at the top of
+`tests/test_replay.c`. Coverage is bounded by what the recording does, so
+more recordings mean a wider net.
+
 ## Packaging
 
 - `cmake --install` installs to `/usr/games` + `/usr/share/games/xquest`,

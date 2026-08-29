@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Test suite (`ctest --test-dir build`), run in CI on Linux, macOS and
+  Windows: config round-trip against the original's exact bytes, demo
+  format and replay determinism, and an end-to-end replay of a recorded
+  demo through the real engine that pins physics and the RNG stream.
 - Demo recording and playback, in the original `xquest.dmo` format:
   `--record [FILE]` captures a game, `--play [FILE]` replays one. A
   load/save cycle reproduces the shipped 1994 `xquest.dmo` byte for byte.

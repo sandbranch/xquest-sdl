@@ -106,3 +106,36 @@ install(FILES "${CMAKE_SOURCE_DIR}/debian/xquest.6"
     DESTINATION "${CMAKE_INSTALL_MANDIR}/man6"
     OPTIONAL
 )
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+# ctest --test-dir build   (or: cmake --build build && ctest --test-dir build)
+# Disable with -DXQUEST_BUILD_TESTS=OFF.
+option(XQUEST_BUILD_TESTS "Build the test suite" ON)
+
+if(XQUEST_BUILD_TESTS)
+    enable_testing()
+
+    # Engine sources the tests link against: everything except main.c, which
+    # owns the SDL window and the game loop.
+    set(XQUEST_TEST_SRC
+        src/assets.c src/game.c src/entities.c src/collision.c
+        src/config.c src/demo.c src/audio.c src/render.c
+        src/starfield.c src/input.c src/menu.c src/hiscore.c
+    )
+
+    foreach(t test_config test_demo test_replay)
+        add_executable(${t} tests/${t}.c ${XQUEST_TEST_SRC})
+        target_include_directories(${t} PRIVATE src ${SDL2_INCLUDE_DIRS})
+        target_link_libraries(${t} PRIVATE ${SDL2_LIBRARIES})
+        if(NOT MSVC)
+            target_link_libraries(${t} PRIVATE m)
+        endif()
+        target_compile_definitions(${t} PRIVATE ASSET_DIR="${XQUEST_ASSET_DIR}")
+    endforeach()
+
+    add_test(NAME config  COMMAND test_config)
+    add_test(NAME demo    COMMAND test_demo  "${CMAKE_SOURCE_DIR}/tests/data/reference.dmo")
+    # Replay needs the game data and the reference recording.
+    add_test(NAME replay  COMMAND test_replay
+             "${XQUEST_DATA_SOURCE}" "${CMAKE_SOURCE_DIR}/tests/data/reference.dmo")
+endif()
