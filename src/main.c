@@ -73,11 +73,20 @@ int main(void) {
     config_load(&cfg, cfg_path);
     int diff = cfg.player[0].difficulty;
 
-    /* High score table - load once, shared across sessions */
+    /* High score table - load once, shared across sessions. Stays its own
+       xquest.scr in the original binary format; it just needs to live
+       somewhere writable, since an installed asset dir is read-only. */
     HiTable ht;
     char hi_path[512];
-    snprintf(hi_path, sizeof(hi_path), "%s/xquest.scr", asset_dir);
-    hi_load(&ht, hi_path);
+    user_file_path(hi_path, sizeof(hi_path), asset_dir, "xquest.scr");
+    if (!hi_load(&ht, hi_path)) {
+        /* First run against a read-only install: seed from the bundled table
+           so the shipped scores survive, then save to the writable copy. */
+        char bundled[512];
+        snprintf(bundled, sizeof(bundled), "%s/xquest.scr", asset_dir);
+        hi_load(&ht, bundled);
+        hi_save(&ht, hi_path);
+    }
 
     /* ---- Outer loop: menu → game → game-over → menu ---- */
     for (;;) {

@@ -4,6 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__unix__) || defined(__unix) || (defined(__APPLE__) && 0)
+#  define XQ_XDG 1
+#  include <sys/stat.h>
+#  include <sys/types.h>
+#endif
+/* Apple and Windows have their own conventions; SDL_GetPrefPath is right there. */
+#if defined(__APPLE__) || defined(_WIN32)
+#  undef XQ_XDG
+#endif
+
 /* Factory defaults, taken from the original distrib/xquest.cfg. */
 void config_defaults(Config *cfg) {
     static const int keys_p1[CFG_NUM_KEYS] =
@@ -48,31 +58,62 @@ static bool file_is_writable(const char *path) {
     return true;
 }
 
-void config_path(char *buf, size_t n, const char *asset_dir) {
+#ifdef XQ_XDG
+/* Resolve an XDG base dir: $var if set and absolute, else $HOME/fallback.
+   Returns false if neither is usable. */
+static bool xdg_base(char *buf, size_t n, const char *var, const char *fallback) {
+    const char *v = getenv(var);
+    if (v && v[0] == '/') { snprintf(buf, n, "%s", v); return true; }
+    const char *home = getenv("HOME");
+    if (home && home[0]) { snprintf(buf, n, "%s/%s", home, fallback); return true; }
+    return false;
+}
+#endif
+
+void user_file_path(char *buf, size_t n, const char *asset_dir,
+                    const char *filename) {
     const char *env = getenv("XQUEST_CONFIG_DIR");
     if (env && env[0]) {
-        snprintf(buf, n, "%s/xquest.cfg", env);
+        snprintf(buf, n, "%s/%s", env, filename);
         return;
     }
 
-    /* A writable xquest.cfg beside the game data means a portable or original
+    /* A writable copy beside the game data means a portable or original
        DOS-style install: use it in place, as the original did. */
     if (asset_dir && asset_dir[0]) {
         char beside[512];
-        snprintf(beside, sizeof(beside), "%s/xquest.cfg", asset_dir);
+        snprintf(beside, sizeof(beside), "%s/%s", asset_dir, filename);
         if (file_is_writable(beside)) {
             snprintf(buf, n, "%s", beside);
             return;
         }
     }
 
+#ifdef XQ_XDG
+    char base[512];
+    if (xdg_base(base, sizeof(base), "XDG_CONFIG_HOME", ".config")) {
+        char dir[640];
+        snprintf(dir, sizeof(dir), "%s/xquest", base);
+        /* mkdir the base too: ~/.config may not exist on a bare account.
+           Existing directories and races both surface as EEXIST, which is fine. */
+        mkdir(base, 0755);
+        mkdir(dir,  0755);
+        snprintf(buf, n, "%s/%s", dir, filename);
+        return;
+    }
+#endif
+
     char *pref = SDL_GetPrefPath(NULL, "xquest");
     if (pref) {
-        snprintf(buf, n, "%sxquest.cfg", pref);   /* SDL_GetPrefPath ends in a separator */
+        snprintf(buf, n, "%s%s", pref, filename);  /* SDL_GetPrefPath ends in a separator */
         SDL_free(pref);
     } else {
-        snprintf(buf, n, "xquest.cfg");
+        snprintf(buf, n, "%s", filename);
     }
+}
+
+void config_path(char *buf, size_t n, const char *asset_dir) {
+    user_file_path(buf, n, asset_dir, "xquest.cfg");
 }
 
 /* ---- load ------------------------------------------------------------ */

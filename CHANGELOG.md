@@ -9,12 +9,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Settings now persist between runs, in the original `xquest.cfg` format.
   Difficulty chosen in the menu is restored on next launch instead of
   resetting to Average every time.
-- The config file is written to a per-user data directory
-  (`~/.local/share/xquest/` on Linux, `%APPDATA%` on Windows,
-  `~/Library/Application Support` on macOS), so it works from a read-only
-  install. An existing writable `xquest.cfg` beside the game data is used
-  in place instead, preserving portable and original DOS-style installs.
-  `$XQUEST_CONFIG_DIR` overrides both.
+- Settings and high scores now live together in `~/.config/xquest/`
+  (honouring `$XDG_CONFIG_HOME`); on Windows and macOS they go to the
+  native per-app directory. They stay two files in their original formats,
+  `xquest.cfg` and `xquest.scr`. An existing writable copy beside the game
+  data is used in place instead, preserving portable and original
+  DOS-style installs. `$XQUEST_CONFIG_DIR` overrides both.
 - Fields the port has no UI for (input sensitivity, key bindings, joystick
   calibration, Sound Blaster port/IRQ/DMA) are parsed and written back
   unchanged, so round-tripping an original file loses nothing. A load/save
@@ -22,6 +22,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   player-modified file byte-for-byte.
 
 ### Fixed
+- High scores were written next to the game data, which is read-only on a
+  packaged install, so `hi_save` failed silently and nothing persisted for
+  anyone using the .deb, the AppImage or the Windows installer. They now
+  go to the per-user directory, seeded on first run from the bundled table
+  so the shipped scores survive.
 - `CLAUDE.md` described `xquest.cfg` as a binary format. It is plain text
   with CRLF line endings and a `value label` per line.
 

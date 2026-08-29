@@ -41,12 +41,19 @@ typedef struct {
 /* Fill cfg with the factory defaults shipped in the original distrib/xquest.cfg. */
 void config_defaults(Config *cfg);
 
-/* Resolve where xquest.cfg should live and store it in buf.
+/* Resolve where a writable game file (xquest.cfg, xquest.scr) should live,
+   creating the directory if needed. Both live together in one per-user
+   directory: ~/.config/xquest on Linux (honouring $XDG_CONFIG_HOME), and the
+   native per-app directory from SDL_GetPrefPath on Windows and macOS.
 
-   Order: $XQUEST_CONFIG_DIR, then a writable xquest.cfg sitting next to the
-   game data (portable or original DOS install), then the per-user data dir
-   from SDL_GetPrefPath. The last is the normal case for an installed build,
-   whose asset dir is read-only. */
+   Order: $XQUEST_CONFIG_DIR, then an existing writable copy sitting next to
+   the game data (portable or original DOS install), then that per-user
+   directory. The last is the normal case for an installed build, whose asset
+   dir is read-only. */
+void user_file_path(char *buf, size_t n, const char *asset_dir,
+                    const char *filename);
+
+/* Convenience wrapper: the config file, in the config dir. */
 void config_path(char *buf, size_t n, const char *asset_dir);
 
 /* Load from path. On any failure cfg is left holding defaults; returns false. */
