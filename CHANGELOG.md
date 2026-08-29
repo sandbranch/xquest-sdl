@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-29
+
+Feature-complete against XQuest v1.3. Every subsystem of the original is
+now ported: gameplay, audio, high scores, settings, and demo recording,
+playback and attract mode. Settings and scores persist, and a test suite
+guards the physics.
+
 ### Added
 - Test suite (`ctest --test-dir build`), run in CI on Linux, macOS and
   Windows: config round-trip against the original's exact bytes, demo
