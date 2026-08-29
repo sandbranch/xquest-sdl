@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <string.h>
 #include "assets.h"
 #include "render.h"
 #include "input.h"
@@ -9,6 +10,7 @@
 #include "starfield.h"
 #include "audio.h"
 #include "config.h"
+#include "demo.h"
 
 #ifndef ASSET_DIR
 #define ASSET_DIR "../xquest"
@@ -22,10 +24,46 @@ static void save_settings(const Config *cfg, const char *path) {
         fprintf(stderr, "xquest: could not save settings to %s\n", path);
 }
 
-int main(void) {
+static void usage(const char *prog) {
+    printf("Usage: %s [options]\n\n"
+           "  --play [FILE]     play back a demo (default: xquest.dmo in the\n"
+           "                    config dir) and return to the menu\n"
+           "  --record [FILE]   record the next game to FILE\n"
+           "  --help            show this message\n\n"
+           "With no options the game starts normally. A demo file also drives\n"
+           "attract mode: the menu plays it after %d seconds idle.\n",
+           prog, MENU_IDLE_SECONDS);
+}
+
+int main(int argc, char **argv) {
     /* AppImage / portable override: XQUEST_DATA_DIR env var takes precedence. */
     const char *asset_dir = getenv("XQUEST_DATA_DIR");
     if (!asset_dir || asset_dir[0] == '\0') asset_dir = ASSET_DIR;
+
+    const char *play_arg = NULL, *record_arg = NULL;
+    bool want_play = false, want_record = false;
+    for (int i = 1; i < argc; i++) {
+        /* An optional filename may follow; anything starting with '-' is the
+           next option, not a filename. */
+        if (strcmp(argv[i], "--play") == 0) {
+            want_play = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') play_arg = argv[++i];
+        } else if (strcmp(argv[i], "--record") == 0) {
+            want_record = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') record_arg = argv[++i];
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            usage(argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "xquest: unknown option '%s'\n", argv[i]);
+            usage(argv[0]);
+            return 1;
+        }
+    }
+    if (want_play && want_record) {
+        fprintf(stderr, "xquest: --play and --record are mutually exclusive\n");
+        return 1;
+    }
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;
@@ -73,6 +111,14 @@ int main(void) {
     config_load(&cfg, cfg_path);
     int diff = cfg.player[0].difficulty;
 
+    /* Demo paths. The attract-mode demo lives alongside the settings. */
+    char demo_path[512];
+    user_file_path(demo_path, sizeof(demo_path), asset_dir, "xquest.dmo");
+    if (play_arg)   snprintf(demo_path, sizeof(demo_path), "%s", play_arg);
+    char record_path[512];
+    snprintf(record_path, sizeof(record_path), "%s",
+             record_arg ? record_arg : demo_path);
+
     /* High score table - load once, shared across sessions. Stays its own
        xquest.scr in the original binary format; it just needs to live
        somewhere writable, since an installed asset dir is read-only. */
@@ -89,8 +135,31 @@ int main(void) {
     }
 
     /* ---- Outer loop: menu → game → game-over → menu ---- */
+    /* A demo file present at startup enables attract mode. */
+    Demo attract;
+    bool have_demo = demo_load(&attract, demo_path);
+    if (have_demo) demo_free(&attract);
+
+    bool play_now   = false; /* this pass through the loop is a demo playback */
+    bool record_now = want_record;  /* --record starts a game straight away */
+    if (want_play) {
+        if (!have_demo) {
+            fprintf(stderr, "xquest: cannot read demo file %s\n", demo_path);
+            renderer_destroy(&r); audio_free(); assets_free(&a);
+            SDL_DestroyWindow(win); SDL_Quit();
+            return 1;
+        }
+        play_now = true;
+    }
+
     for (;;) {
-        int chosen = run_menu(&a, &r, win, &ht, hi_path, &diff);
+        int chosen;
+        if (play_now || record_now) {
+            chosen = diff;   /* skip the menu straight into the demo */
+        } else {
+            chosen = run_menu(&a, &r, win, &ht, hi_path, &diff, have_demo);
+            if (chosen == MENU_DEMO_TIMEOUT) { play_now = true; chosen = diff; }
+        }
 
         /* Save as soon as it changes, so the setting survives a crash or a
            kill rather than only a clean exit. */
@@ -101,17 +170,46 @@ int main(void) {
 
         if (chosen < 0) break;   /* user chose Quit or closed window */
 
+        /* Demo state for this game. Playback replays a recording; recording
+           captures one. Both are deterministic given the same seed, so a
+           demo this port records replays exactly. */
+        Demo     demo;
+        bool     playing   = false;
+        bool     recording = false;
+        int      demo_ptr  = 0;
+        uint32_t seed      = (uint32_t)SDL_GetTicks();
+        int      game_diff = diff;
+
+        if (play_now) {
+            if (demo_load(&demo, demo_path)) {
+                playing   = true;
+                seed      = demo.seed;
+                /* Replaying at a different difficulty would change enemy
+                   speed and desync immediately. */
+                game_diff = demo_difficulty(&demo);
+                if (game_diff < 0 || game_diff > 4) game_diff = diff;
+            } else {
+                fprintf(stderr, "xquest: cannot read demo file %s\n", demo_path);
+                play_now = false;
+                continue;
+            }
+        } else if (record_now) {
+            recording = true;
+        }
+
         Input     inp;
         GameState gs;
         Starfield sf;
         input_init(&inp);
-        game_init(&gs, a.ship[0].w, a.ship[0].h, (uint32_t)SDL_GetTicks());
-        gs.diff_level = diff;
-        gs.gamespeed  = diff_speed[diff];
+        game_init(&gs, a.ship[0].w, a.ship[0].h, seed);
+        if (recording) demo_start(&demo, seed, &cfg);
+        gs.diff_level = game_diff;
+        gs.gamespeed  = diff_speed[game_diff];
         level_init(&gs, a.gate_left.w, a.gate_right.w);
         starfield_init(&sf, 0);
 
         int  running      = 1;
+        bool quit_app     = false;   /* window closed: exit, don't bounce to the menu */
         bool game_over    = false;   /* true only when lives reach 0 */
         bool paused       = false;
         bool quit_confirm = false;   /* ESC: showing "QUIT?" prompt */
@@ -122,7 +220,7 @@ int main(void) {
 
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
-                if (ev.type == SDL_QUIT) { running = 0; }
+                if (ev.type == SDL_QUIT) { running = 0; quit_app = true; }
                 if (ev.type == SDL_KEYDOWN) {
                     SDL_Keycode sym = ev.key.keysym.sym;
                     if (quit_confirm) {
@@ -168,14 +266,46 @@ int main(void) {
                 bool bomb_pressed = inp.smart_bomb
                                  || inp.key[SDL_SCANCODE_SPACE];
 
+                bool want_fire = inp.fire_pressed;
+                bool want_held = inp.fire_held;
+                bool want_bomb = bomb_pressed;
+
+                if (playing) {
+                    /* Any fire or bomb press aborts the demo, as in the
+                       original (MoveShip sets GameOver on a button click). */
+                    if (want_fire || want_bomb) { running = 0; break; }
+                    if (demo_ptr >= demo.num_frames) { running = 0; break; }
+
+                    const DemoFrame *fr = &demo.frames[demo_ptr];
+                    gs.demo_override = true;
+                    gs.demo_delx = fr->delx;
+                    gs.demo_dely = fr->dely;
+                    want_fire = (fr->but & DEMO_BUT_FIRE)      != 0;
+                    want_bomb = (fr->but & DEMO_BUT_BOMB)      != 0;
+                    want_held = (fr->but & DEMO_BUT_FIRE_HELD) != 0;
+                    dx = dy = 0;
+                    brake = false;
+                } else {
+                    gs.demo_override = false;
+                }
+
                 if (!exploding) {
-                    if (inp.fire_pressed) shoot(&gs, &a);
+                    uint8_t but = 0;
+                    if (want_fire) { shoot(&gs, &a); but |= DEMO_BUT_FIRE; }
                     /* RapidFire: auto-fire every 4th tick while button held */
-                    if (gs.powerup_timer[PU_RAPID] > 0 && !inp.fire_pressed &&
-                        inp.fire_held && (gs.frame_count & 3) == 0)
+                    if (gs.powerup_timer[PU_RAPID] > 0 && !want_fire &&
+                        want_held && (gs.frame_count & 3) == 0) {
                         shoot(&gs, &a);
-                    if (bomb_pressed) fire_smart_bomb(&gs, &a);
+                        but |= DEMO_BUT_FIRE_HELD;
+                    }
+                    if (want_bomb) { fire_smart_bomb(&gs, &a); but |= DEMO_BUT_BOMB; }
                     game_tick(&gs, dx, dy, brake);
+
+                    /* One frame per ticked frame, on both paths, so a
+                       recording and its playback stay in step. */
+                    if (playing)   demo_ptr++;
+                    if (recording) demo_append(&demo, gs.rec_delx, gs.rec_dely, but);
+
                     level_check_pickups(&gs);
                     powerups_tick(&gs);
                 }
@@ -198,8 +328,8 @@ int main(void) {
                     gs.level = next_level;
                     gs.lives = saved_lives;
                     gs.bombs = saved_bombs;
-                    gs.diff_level = diff;
-                    gs.gamespeed  = diff_speed[diff];
+                    gs.diff_level = game_diff;
+                    gs.gamespeed  = diff_speed[game_diff];
                     level_init(&gs, a.gate_left.w, a.gate_right.w);
                     break;
                 }
@@ -223,8 +353,8 @@ int main(void) {
                     gs.level = saved_level;
                     gs.lives = saved_lives;
                     gs.bombs = saved_bombs;
-                    gs.diff_level = diff;
-                    gs.gamespeed  = diff_speed[diff];
+                    gs.diff_level = game_diff;
+                    gs.gamespeed  = diff_speed[game_diff];
                     level_init(&gs, a.gate_left.w, a.gate_right.w);
                 }
             }
@@ -259,6 +389,35 @@ int main(void) {
         }
 
         input_shutdown(&inp);
+
+        if (quit_app) {
+            /* Still save a recording cut short by closing the window. */
+            if (recording && demo.num_frames > 0)
+                demo_save(&demo, record_path);
+            if (playing || recording) demo_free(&demo);
+            break;
+        }
+
+        if (recording) {
+            record_now = false;   /* one recording, then back to the menu */
+            if (demo_save(&demo, record_path)) {
+                printf("xquest: recorded %d frames to %s\n",
+                       demo.num_frames, record_path);
+                /* A freshly recorded demo enables attract mode straight away. */
+                if (strcmp(record_path, demo_path) == 0) have_demo = true;
+            } else {
+                fprintf(stderr, "xquest: could not write demo to %s\n", record_path);
+            }
+        }
+        if (playing || recording) demo_free(&demo);
+
+        if (playing) {
+            /* A demo is not a game: no score, no hall of fame. */
+            playing  = false;
+            play_now = false;
+            if (want_play) break;   /* --play: one playback, then exit */
+            continue;
+        }
 
         if (game_over)
             run_game_over(&a, &r, &ht, hi_path, gs.diff_level, gs.score, gs.level);

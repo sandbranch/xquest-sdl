@@ -34,6 +34,7 @@ add_executable(xquest
     src/hiscore.c
     src/audio.c
     src/config.c
+    src/demo.c
 )
 
 target_include_directories(xquest PRIVATE src ${SDL2_INCLUDE_DIRS})

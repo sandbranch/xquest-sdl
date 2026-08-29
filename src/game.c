@@ -107,6 +107,12 @@ void game_init(GameState *g, int sprite_w, int sprite_h, uint32_t rng_seed) {
     s->dely = 0;
     s->dir  = 0;
 
+    /* Callers set demo_override per tick; clear it so a fresh state is never
+       left replaying stale values. */
+    g->demo_override = false;
+    g->demo_delx = g->demo_dely = 0;
+    g->rec_delx  = g->rec_dely  = 0;
+
     g->cam_x = s->x - VIEWPORT_W / 2;
     g->cam_y = s->y - VIEWPORT_H / 2;
     if (g->cam_x < 0) g->cam_x = 0;
@@ -197,6 +203,15 @@ void game_tick(GameState *g, int inp_dx, int inp_dy, bool brake) {
         s->delx = (s->delx * 5) / 6;
         s->dely = (s->dely * 5) / 6;
     }
+
+    /* Demo playback substitutes the recorded velocity here, and recording
+       reads it here: after braking, before the speed clamp. */
+    if (g->demo_override) {
+        s->delx = g->demo_delx;
+        s->dely = g->demo_dely;
+    }
+    g->rec_delx = s->delx;
+    g->rec_dely = s->dely;
 
     int speed = abs(s->delx) + abs(s->dely);
     if (speed > MAX_SHIP_SPEED) {

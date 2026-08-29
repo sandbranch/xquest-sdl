@@ -159,6 +159,14 @@ typedef struct {
 
     /* Smart-bomb flash: counts 11→0 (Pascal SmartBombed), decrement every other tick */
     int  smart_bomb_flash;
+
+    /* Demo support. The original records the ship velocity after braking but
+       before the speed clamp, and substitutes it at the same point on
+       playback (MoveShip in xquest.pas). Set demo_override per tick; it is
+       not preserved across game_init. */
+    bool demo_override;        /* playback: use demo_delx/dely, ignore input */
+    int  demo_delx, demo_dely;
+    int  rec_delx,  rec_dely;  /* what a recording should store for this tick */
 } GameState;
 
 #define SHIP_EXPLODE_TICKS 40  /* freeze duration after ship death */

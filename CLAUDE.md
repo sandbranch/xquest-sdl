@@ -50,7 +50,7 @@ Original resolution: 320×240 (Mode X VGA), split into a 320×217 game area and 
 | Timer | PZT timer, ~67 fps target | SDL_GetTicks64, fixed timestep loop |
 | Config | xquest.cfg text (CRLF, `value label` lines) | Same layout, per-user data dir |
 | High scores | xquest.scr binary | Same binary layout, same path |
-| Demo | xquest.dmo binary | Same binary layout, same path |
+| Demo | xquest.dmo binary | Same binary layout, config dir |
 
 ### Game object limits (from xqvars.pas)
 
@@ -121,7 +121,13 @@ assets/                  -- symlink or copy from ../xquest/
 - The original targets ~67 fps (15 ms per tick). Use a fixed-timestep loop: accumulate real elapsed time, step in 15 ms increments, render with interpolation or just snap.
 - xquest.gfx uses a custom planar format. Write an asset loader that converts it to SDL_Surface/SDL_Texture on startup. Preserve the raw bitmask data for collision.
 - xquest.snd contains concatenated raw PCM chunks. The enm file records offsets/lengths.
-- Demo playback stores (delx, dely, buttons) per frame plus initial random seed - implement this early to enable regression testing.
+- Demo playback stores (delx, dely, buttons) per frame plus initial random seed.
+  Implemented in src/demo.c: 79-byte header (seed, GameMode, two 37-byte
+  PlayerInfo records) then 5-byte frames. Note the PlayerInfo field order
+  differs from xquest.cfg's. Demos this port records replay exactly, but the
+  original 1994 xquest.dmo will not: faithful replay needs a matching random
+  number stream, and the port uses xorshift32 where Turbo Pascal used its own
+  LCG.
 - The status bar HUD (bottom 23 lines) shows: score, lives, level, bombs, active powerups. Render it as a fixed overlay after the game viewport.
 - Starfield: 400 stars, perspective projection, used behind menus. Straightforward to re-implement with SDL_RenderDrawPoint.
 

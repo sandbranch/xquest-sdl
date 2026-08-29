@@ -259,7 +259,8 @@ static int item_at(int ly) {
 }
 
 int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
-             HiTable *ht, const char *hi_path, int *diff_io) {
+             HiTable *ht, const char *hi_path, int *diff_io,
+             bool demo_available) {
     (void)hi_path;
 
     Starfield sf;
@@ -268,6 +269,7 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
     int sel  = 0;   /* 0=Start, 1=Difficulty, 2=Hall of Fame, 3=Quit */
     int diff = *diff_io;   /* seeded from the saved config */
     uint32_t last_tick = SDL_GetTicks();
+    uint32_t last_input = SDL_GetTicks();   /* for the attract-mode timeout */
     int color_cycle = 0;
     int result = -1;
 
@@ -282,6 +284,9 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_QUIT) goto done;
+            if (ev.type == SDL_KEYDOWN || ev.type == SDL_MOUSEBUTTONDOWN ||
+                ev.type == SDL_MOUSEMOTION || ev.type == SDL_MOUSEWHEEL)
+                last_input = SDL_GetTicks();
             if (ev.type == SDL_KEYDOWN) {
                 switch (ev.key.keysym.sym) {
                     case SDLK_ESCAPE:                       goto done;
@@ -331,6 +336,10 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
         }
 
         uint32_t now = SDL_GetTicks();
+        if (demo_available && now - last_input >= MENU_IDLE_SECONDS * 1000u) {
+            result = MENU_DEMO_TIMEOUT;
+            goto done;
+        }
         while (now - last_tick >= TICK_MS) {
             last_tick += TICK_MS;
             starfield_step(&sf);

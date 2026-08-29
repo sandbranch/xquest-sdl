@@ -6,6 +6,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Demo recording and playback, in the original `xquest.dmo` format:
+  `--record [FILE]` captures a game, `--play [FILE]` replays one. A
+  load/save cycle reproduces the shipped 1994 `xquest.dmo` byte for byte.
+- Attract mode: the menu plays a demo after 30 seconds idle, matching
+  `MenuTimeOut` in the original. Enabled only when a demo file exists at
+  `xquest.dmo` in the config dir, so a fresh install simply waits.
+- Demos replay deterministically: the recorded seed and difficulty are
+  restored, and each frame stores the ship velocity after braking but
+  before the speed clamp, exactly where the original captured it.
 - Settings now persist between runs, in the original `xquest.cfg` format.
   Difficulty chosen in the menu is restored on next launch instead of
   resetting to Average every time.
@@ -22,6 +31,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   player-modified file byte-for-byte.
 
 ### Fixed
+- Closing the window during a game returned to the menu instead of
+  quitting, because the game loop did not record why it stopped.
 - High scores were written next to the game data, which is read-only on a
   packaged install, so `hi_save` failed silently and nothing persisted for
   anyone using the .deb, the AppImage or the Windows installer. They now
