@@ -182,7 +182,13 @@ int main(int argc, char **argv) {
             chosen = diff;   /* skip the menu straight into the demo */
         } else {
             chosen = run_menu(&a, &r, win, &ht, hi_path, &diff, have_demo);
-            if (chosen == MENU_DEMO_TIMEOUT) { play_now = true; chosen = diff; }
+            if (chosen == MENU_DEMO_TIMEOUT || chosen == MENU_PLAY_DEMO) {
+                play_now = true;
+                chosen   = diff;
+            } else if (chosen == MENU_RECORD_DEMO) {
+                record_now = true;
+                chosen     = diff;
+            }
         }
 
         /* Save as soon as it changes, so the setting survives a crash or a

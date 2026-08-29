@@ -28,7 +28,7 @@ static void draw_window(Renderer *r, int x, int y, int w, int h) {
 }
 
 #define TICK_MS     15
-#define NUM_ITEMS    4   /* Start Game, Difficulty, Hall of Fame, Quit */
+#define NUM_ITEMS    6   /* Start, Difficulty, Hall of Fame, Play, Record, Quit */
 
 static const char * const diff_names[5] = {
     "WIMP", "TIMID", "AVERAGE", "TRICKY", "INHUMAN"
@@ -332,7 +332,9 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
         if (key_enter) {
             if (sel == 0) { result = diff; goto done; }
             if (sel == 2) { run_halloffame(a, r, ht, diff, 120); }
-            if (sel == 3) goto done;
+            if (sel == 3 && demo_available) { result = MENU_PLAY_DEMO;   goto done; }
+            if (sel == 4) { result = MENU_RECORD_DEMO; goto done; }
+            if (sel == 5) goto done;
         }
 
         uint32_t now = SDL_GetTicks();
@@ -353,7 +355,8 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
             render_sprite_2xv(r, &a->startpic_pbm, 0, 10);
 
         char line[48];
-        const int Y0 = 120, DY = 20;
+        /* Six entries now, so they sit a little tighter and start higher. */
+        const int Y0 = 112, DY = 18;
 
         comix_centered(r, a, Y0 + 0*DY, sel==0 ? MENU_COLOR_SEL : MENU_COLOR_NORMAL,
                        "Start Game");
@@ -365,7 +368,15 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
         comix_centered(r, a, Y0 + 2*DY, sel==2 ? MENU_COLOR_SEL : MENU_COLOR_NORMAL,
                        "Hall of Fame");
 
+        /* Nothing to play until a demo has been recorded, so say so rather
+           than offer an entry that silently does nothing. */
         comix_centered(r, a, Y0 + 3*DY, sel==3 ? MENU_COLOR_SEL : MENU_COLOR_NORMAL,
+                       demo_available ? "Play Demo" : "Play Demo  (none yet)");
+
+        comix_centered(r, a, Y0 + 4*DY, sel==4 ? MENU_COLOR_SEL : MENU_COLOR_NORMAL,
+                       "Record Demo");
+
+        comix_centered(r, a, Y0 + 5*DY, sel==5 ? MENU_COLOR_SEL : MENU_COLOR_NORMAL,
                        "Quit");
 
         comix_centered(r, a, 225, MENU_COLOR_NORMAL, "Keys  Mouse");

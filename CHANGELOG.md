@@ -9,6 +9,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Demo recording and playback, in the original `xquest.dmo` format:
   `--record [FILE]` captures a game, `--play [FILE]` replays one. A
   load/save cycle reproduces the shipped 1994 `xquest.dmo` byte for byte.
+- Play Demo and Record Demo entries in the main menu, so demos can be
+  made and watched without the command line, as in the original's
+  `DemoMenu`. Play Demo reads "(none yet)" until a demo exists.
 - Attract mode: the menu plays a demo after 30 seconds idle, matching
   `MenuTimeOut` in the original. Enabled only when a demo file exists at
   `xquest.dmo` in the config dir, so a fresh install simply waits.

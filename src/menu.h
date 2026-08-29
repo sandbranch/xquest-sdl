@@ -8,6 +8,10 @@
    attract-mode demo, matching MenuTimeOut in the original. */
 #define MENU_DEMO_TIMEOUT -2
 
+/* Chosen from the Demo entries, mirroring DemoMenu in the original. */
+#define MENU_PLAY_DEMO    -3
+#define MENU_RECORD_DEMO  -4
+
 /* Seconds of inactivity before that happens. */
 #define MENU_IDLE_SECONDS 30
 
