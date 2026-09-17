@@ -10,7 +10,8 @@ typedef struct {
     int  mouse_dx, mouse_dy;     /* relative motion accumulated this frame */
     bool fire_pressed;           /* edge: went down this frame */
     bool fire_held;              /* level: currently held */
-    bool smart_bomb;
+    bool smart_bomb_pressed;     /* edge: went down this frame (fires once) */
+    bool smart_bomb_held;        /* level: currently held */
     /* Gamepad / joystick */
     SDL_GameController *gc;      /* NULL if no recognised gamepad connected */
     SDL_Joystick       *joy;     /* fallback for unrecognised controllers */

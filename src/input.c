@@ -43,7 +43,8 @@ void input_shutdown(Input *inp) {
 void input_frame_begin(Input *inp) {
     inp->mouse_dx    = 0;
     inp->mouse_dy    = 0;
-    inp->fire_pressed = false;
+    inp->fire_pressed       = false;
+    inp->smart_bomb_pressed = false;
     inp->joy_dx = axis_to_delta(inp->joy_axis_x);
     inp->joy_dy = axis_to_delta(inp->joy_axis_y);
 }
@@ -86,11 +87,14 @@ void input_event(Input *inp, const SDL_Event *ev) {
             inp->fire_pressed = true;
             inp->fire_held    = true;
         }
-        if (ev->button.button == SDL_BUTTON_RIGHT) inp->smart_bomb = true;
+        if (ev->button.button == SDL_BUTTON_RIGHT) {
+            inp->smart_bomb_pressed = true;
+            inp->smart_bomb_held    = true;
+        }
         break;
     case SDL_MOUSEBUTTONUP:
-        if (ev->button.button == SDL_BUTTON_LEFT)  inp->fire_held  = false;
-        if (ev->button.button == SDL_BUTTON_RIGHT) inp->smart_bomb = false;
+        if (ev->button.button == SDL_BUTTON_LEFT)  inp->fire_held       = false;
+        if (ev->button.button == SDL_BUTTON_RIGHT) inp->smart_bomb_held = false;
         break;
 
     /* ---- Gamepad device lifecycle ---- */
@@ -140,7 +144,8 @@ void input_event(Input *inp, const SDL_Event *ev) {
             inp->fire_held    = true;
             break;
         case SDL_CONTROLLER_BUTTON_B:
-            inp->smart_bomb = true;
+            inp->smart_bomb_pressed = true;
+            inp->smart_bomb_held    = true;
             break;
         case SDL_CONTROLLER_BUTTON_X:
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
@@ -159,7 +164,7 @@ void input_event(Input *inp, const SDL_Event *ev) {
             inp->fire_held = false;
             break;
         case SDL_CONTROLLER_BUTTON_B:
-            inp->smart_bomb = false;
+            inp->smart_bomb_held = false;
             break;
         case SDL_CONTROLLER_BUTTON_X:
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
@@ -181,14 +186,14 @@ void input_event(Input *inp, const SDL_Event *ev) {
     case SDL_JOYBUTTONDOWN:
         if (!inp->joy || ev->jbutton.which != our_instance(inp)) break;
         if (ev->jbutton.button == 0) { inp->fire_pressed = true; inp->fire_held = true; }
-        if (ev->jbutton.button == 1) inp->smart_bomb = true;
+        if (ev->jbutton.button == 1) { inp->smart_bomb_pressed = true; inp->smart_bomb_held = true; }
         if (ev->jbutton.button == 2) inp->joy_brake  = true;
         break;
     case SDL_JOYBUTTONUP:
         if (!inp->joy || ev->jbutton.which != our_instance(inp)) break;
-        if (ev->jbutton.button == 0) inp->fire_held  = false;
-        if (ev->jbutton.button == 1) inp->smart_bomb = false;
-        if (ev->jbutton.button == 2) inp->joy_brake  = false;
+        if (ev->jbutton.button == 0) inp->fire_held       = false;
+        if (ev->jbutton.button == 1) inp->smart_bomb_held = false;
+        if (ev->jbutton.button == 2) inp->joy_brake       = false;
         break;
     case SDL_JOYHATMOTION:
         if (!inp->joy || ev->jhat.which != our_instance(inp)) break;

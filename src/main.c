@@ -296,12 +296,9 @@ int main(int argc, char **argv) {
 
                 bool exploding = (gs.ship_explode_timer > 0);
 
-                bool bomb_pressed = inp.smart_bomb
-                                 || inp.key[SDL_SCANCODE_SPACE];
-
                 bool want_fire = inp.fire_pressed;
                 bool want_held = inp.fire_held;
-                bool want_bomb = bomb_pressed;
+                bool want_bomb = inp.smart_bomb_pressed;
 
                 if (playing) {
                     /* Any fire or bomb press aborts the demo, as in the
