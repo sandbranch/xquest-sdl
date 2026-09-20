@@ -77,18 +77,31 @@ cmake --build build
 
 ### Window size
 
-The game renders at the original 320x240 and the window is an integer
-multiple of that, so every pixel stays a square block. By default the
-window is sized to fill about 85% of your screen's usable area, which
-keeps it readable on a 4K laptop rather than a postage stamp in the
-middle. Override it with `--scale N` (or `XQUEST_SCALE=N`):
+The game renders at the original 320x240 and the window is always a
+whole multiple of that, so every pixel stays a square block. By default
+the window fills about 90% of your screen's usable area, which keeps it
+readable on a 4K laptop rather than a postage stamp in the middle.
 
 ```sh
 ./build/xquest --scale 3      # a 960x720 window
+./build/xquest --scale auto   # the default: fit the screen
+./build/xquest --fullscreen   # borderless desktop fullscreen
 ```
 
-The window is resizable either way; the picture is letterboxed to keep
+A scale you ask for is capped at what actually fits the display, and
+the window is resizable either way; the picture is letterboxed to keep
 the 4:3 aspect.
+
+| Key | Action |
+|-----|--------|
+| F11 or Alt+Enter | Toggle fullscreen |
+| Ctrl+plus / Ctrl+minus | Resize the window one step |
+
+These work everywhere, menu or mid-game. Fullscreen is the borderless
+desktop kind: no video mode switch, so nothing else on your desktop
+gets rearranged. `XQUEST_SCALE` (a number or `auto`) and
+`XQUEST_FULLSCREEN` set the same things from the environment, which is
+handy for a launcher or a desktop file.
 
 ---
 
@@ -153,6 +166,8 @@ Firing inherits your current velocity - a fast ship fires fast missiles.
 | Up / Down | Navigate items |
 | Left / Right or Enter | Cycle difficulty |
 | Enter on Start Game | Begin |
+| F11 or Alt+Enter | Toggle fullscreen |
+| Ctrl+plus / Ctrl+minus | Resize the window |
 | Escape | Quit |
 
 ---

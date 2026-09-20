@@ -5,6 +5,12 @@
 #include <stdlib.h>
 
 int renderer_init(Renderer *r, SDL_Window *win, const RGB palette[256]) {
+    r->window   = win;
+    int win_w = RENDER_W, win_h = RENDER_H;
+    SDL_GetWindowSize(win, &win_w, &win_h);
+    r->scale = win_w / RENDER_W;
+    if (r->scale < SCALE_MIN) r->scale = SCALE_MIN;
+
     r->renderer = SDL_CreateRenderer(win, -1,
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!r->renderer) {
@@ -38,6 +44,105 @@ int renderer_init(Renderer *r, SDL_Window *win, const RGB palette[256]) {
 
     memset(r->buf, 0, sizeof(r->buf));
     return 0;
+}
+
+/* Largest whole multiple of the 320x240 virtual screen that still fits in
+   `percent` of the display work area. SDL reports those bounds in window
+   coordinates, so this comes out right whether the desktop hands us physical
+   pixels (X11 on a 4K panel) or pre-scaled logical ones (Wayland at 200%). */
+int renderer_fit_scale(int display, int percent) {
+    SDL_Rect usable;
+    if (SDL_GetDisplayUsableBounds(display, &usable) != 0 ||
+        usable.w <= 0 || usable.h <= 0)
+        return 3;   /* no idea how big the screen is: the old fixed default */
+
+    int sx = (usable.w * percent / 100) / RENDER_W;
+    int sy = (usable.h * percent / 100) / RENDER_H;
+    int s  = sx < sy ? sx : sy;
+
+    if (s < SCALE_MIN) s = SCALE_MIN;
+    if (s > SCALE_MAX) s = SCALE_MAX;
+    return s;
+}
+
+bool renderer_is_fullscreen(const Renderer *r) {
+    if (!r->window) return false;
+    return (SDL_GetWindowFlags(r->window) &
+            (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) != 0;
+}
+
+void renderer_set_scale(Renderer *r, int scale) {
+    if (!r->window || scale < SCALE_MIN) return;
+
+    int display = SDL_GetWindowDisplayIndex(r->window);
+    if (display < 0) display = 0;
+
+    /* Whatever the user asks for, the window still has to fit the screen. */
+    int max = renderer_fit_scale(display, 100);
+    if (scale > max) scale = max;
+
+    r->scale = scale;
+
+    if (renderer_is_fullscreen(r))
+        SDL_SetWindowFullscreen(r->window, 0);
+    SDL_SetWindowSize(r->window, RENDER_W * scale, RENDER_H * scale);
+    SDL_SetWindowPosition(r->window, SDL_WINDOWPOS_CENTERED,
+                                     SDL_WINDOWPOS_CENTERED);
+}
+
+void renderer_toggle_fullscreen(Renderer *r) {
+    if (!r->window) return;
+
+    bool on = !renderer_is_fullscreen(r);
+    /* Desktop fullscreen: no video mode switch, and the renderer's logical
+       size keeps the 4:3 picture letterboxed whatever shape the screen is. */
+    if (SDL_SetWindowFullscreen(r->window,
+            on ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0) {
+        fprintf(stderr, "xquest: cannot change fullscreen: %s\n", SDL_GetError());
+        return;
+    }
+    if (!on) {
+        SDL_SetWindowSize(r->window, RENDER_W * r->scale, RENDER_H * r->scale);
+        SDL_SetWindowPosition(r->window, SDL_WINDOWPOS_CENTERED,
+                                         SDL_WINDOWPOS_CENTERED);
+    }
+}
+
+/* Alt+Enter as well as F11: unlike mario-final-sdl, where Alt and Enter are
+   both jump keys, Alt is not an XQuest control, and we swallow both halves of
+   the key press so the Return that fires missiles never sees it. */
+static bool is_alt_enter(const SDL_Event *ev) {
+    SDL_Keycode sym = ev->key.keysym.sym;
+    return (sym == SDLK_RETURN || sym == SDLK_KP_ENTER) &&
+           (ev->key.keysym.mod & KMOD_ALT);
+}
+
+bool renderer_display_event(Renderer *r, const SDL_Event *ev) {
+    if (ev->type == SDL_KEYUP)
+        return ev->key.keysym.sym == SDLK_F11 || is_alt_enter(ev);
+
+    /* Auto-repeat is ignored, so holding a key down cannot flap the window. */
+    if (ev->type != SDL_KEYDOWN || ev->key.repeat) return false;
+
+    SDL_Keycode sym = ev->key.keysym.sym;
+
+    if (sym == SDLK_F11 || is_alt_enter(ev)) {
+        renderer_toggle_fullscreen(r);
+        return true;
+    }
+
+    /* Ctrl+plus / Ctrl+minus resize the window one step at a time. */
+    if (ev->key.keysym.mod & KMOD_CTRL) {
+        if (sym == SDLK_EQUALS || sym == SDLK_PLUS || sym == SDLK_KP_PLUS) {
+            renderer_set_scale(r, r->scale + 1);
+            return true;
+        }
+        if (sym == SDLK_MINUS || sym == SDLK_KP_MINUS) {
+            renderer_set_scale(r, r->scale - 1);
+            return true;
+        }
+    }
+    return false;
 }
 
 void renderer_destroy(Renderer *r) {

@@ -155,6 +155,7 @@ static void get_player_name(const Assets *a, Renderer *r, Starfield *sf,
     for (;;) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
+            if (renderer_display_event(r, &ev)) continue;
             if (ev.type == SDL_QUIT) goto done;
             if (ev.type == SDL_KEYDOWN) {
                 if (ev.key.keysym.sym == SDLK_RETURN ||
@@ -213,6 +214,7 @@ void run_halloffame(const Assets *a, Renderer *r,
     for (;;) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
+            if (renderer_display_event(r, &ev)) continue;
             if (ev.type == SDL_QUIT)    return;
             if (ev.type == SDL_KEYDOWN) return;
         }
@@ -283,6 +285,7 @@ int run_menu(const Assets *a, Renderer *r, SDL_Window *win,
 
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
+            if (renderer_display_event(r, &ev)) continue;
             if (ev.type == SDL_QUIT) goto done;
             if (ev.type == SDL_KEYDOWN || ev.type == SDL_MOUSEBUTTONDOWN ||
                 ev.type == SDL_MOUSEMOTION || ev.type == SDL_MOUSEWHEEL)
@@ -416,6 +419,7 @@ void run_game_over(const Assets *a, Renderer *r,
         while (SDL_PollEvent(&ev)) {}
         while (SDL_GetTicks() < deadline) {
             while (SDL_PollEvent(&ev)) {
+                if (renderer_display_event(r, &ev)) continue;
                 if (ev.type == SDL_QUIT)    goto after_box;
                 if (ev.type == SDL_KEYDOWN) goto after_box;
             }
@@ -443,6 +447,7 @@ after_box:;
         while (SDL_GetTicks() < flash_end && !interrupted) {
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
+                if (renderer_display_event(r, &ev)) continue;
                 if (ev.type == SDL_QUIT || ev.type == SDL_KEYDOWN)
                     { interrupted = true; break; }
             }

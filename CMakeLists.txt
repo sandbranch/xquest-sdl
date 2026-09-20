@@ -123,7 +123,7 @@ if(XQUEST_BUILD_TESTS)
         src/starfield.c src/input.c src/menu.c src/hiscore.c
     )
 
-    foreach(t test_config test_demo test_replay)
+    foreach(t test_config test_demo test_replay test_display)
         add_executable(${t} tests/${t}.c ${XQUEST_TEST_SRC})
         target_include_directories(${t} PRIVATE src ${SDL2_INCLUDE_DIRS})
         target_link_libraries(${t} PRIVATE ${SDL2_LIBRARIES})
@@ -134,6 +134,7 @@ if(XQUEST_BUILD_TESTS)
     endforeach()
 
     add_test(NAME config  COMMAND test_config)
+    add_test(NAME display COMMAND test_display)
     add_test(NAME demo    COMMAND test_demo  "${CMAKE_SOURCE_DIR}/tests/data/reference.dmo")
     # Replay needs the game data and the reference recording.
     add_test(NAME replay  COMMAND test_replay

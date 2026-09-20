@@ -3,6 +3,7 @@
 #include "game.h"
 #include "starfield.h"
 #include <SDL2/SDL.h>
+#include <stdbool.h>
 
 #define RENDER_W      320
 #define RENDER_H      240
@@ -10,7 +11,14 @@
 #define HUD_Y         217
 #define HUD_H          23
 
+/* Window size is always a whole multiple of RENDER_W x RENDER_H, so every
+   game pixel stays a square block. Matches mario-final-sdl's range. */
+#define SCALE_MIN       1
+#define SCALE_MAX      16
+
 typedef struct {
+    SDL_Window   *window;   /* kept for the fullscreen and resize hotkeys */
+    int           scale;    /* window size as a multiple of 320x240 */
     SDL_Renderer *renderer;
     SDL_Texture  *screen;   /* 320×240 ARGB streaming texture */
     uint32_t      buf[RENDER_W * RENDER_H];
@@ -19,6 +27,26 @@ typedef struct {
 
 /* Create renderer attached to window. Returns 0 on success. */
 int  renderer_init(Renderer *r, SDL_Window *win, const RGB palette[256]);
+
+/* Largest whole multiple of 320x240 fitting in `percent` of the display's
+   usable area, clamped to SCALE_MIN..SCALE_MAX. Callable before any window
+   exists, as long as SDL's video subsystem is up. Use 90 for a comfortable
+   default (room for panels and the title bar) and 100 as the hard ceiling
+   for a scale the user asked for. */
+int  renderer_fit_scale(int display, int percent);
+
+/* Resize the window to `scale`, capped at what fits the display it is on.
+   Leaves fullscreen if we were in it, and recentres. */
+void renderer_set_scale(Renderer *r, int scale);
+
+bool renderer_is_fullscreen(const Renderer *r);
+void renderer_toggle_fullscreen(Renderer *r);
+
+/* Handle the display hotkeys every event loop shares: F11 or Alt+Enter
+   toggles fullscreen, Ctrl+plus / Ctrl+minus resize the window a step at a
+   time. Returns true when the event was ours, so callers can skip their own
+   handling instead of also reading it as "any key pressed". */
+bool renderer_display_event(Renderer *r, const SDL_Event *ev);
 void renderer_destroy(Renderer *r);
 
 /* Clear the game-area rows (0..VIEWPORT_H-1) to palette index. */

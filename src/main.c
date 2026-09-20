@@ -19,31 +19,15 @@
 
 #define TICK_MS 15   /* ~67 fps fixed timestep */
 
-/* The game renders 320x240 and the window is an integer multiple of that, so
-   every game pixel stays a perfect square block. A fixed 3x window is a
-   postage stamp on a 4K panel, so pick the largest multiple that leaves a
-   comfortable margin inside the display's usable area (the work area, so we
-   never hide under a panel or dock). --scale / XQUEST_SCALE override it. */
-#define WINDOW_FILL 0.85f   /* fraction of the usable area to fill */
-#define SCALE_MIN   1
-#define SCALE_MAX   16
-
-static int auto_window_scale(void) {
-    SDL_Rect usable;
-    if (SDL_GetDisplayUsableBounds(0, &usable) != 0 ||
-        usable.w <= 0 || usable.h <= 0) {
-        return 3;   /* no idea how big the screen is: the old default */
-    }
-    int sx = (int)(usable.w * WINDOW_FILL) / 320;
-    int sy = (int)(usable.h * WINDOW_FILL) / 240;
-    int s  = sx < sy ? sx : sy;
-    if (s < SCALE_MIN) s = SCALE_MIN;
-    if (s > SCALE_MAX) s = SCALE_MAX;
-    return s;
-}
+/* The game renders 320x240 and the window is always a whole multiple of
+   that, so every game pixel stays a square block. A fixed 3x window is a
+   postage stamp on a 4K panel, so the default fits the window to the
+   display; --scale / XQUEST_SCALE override it. The sizing itself lives in
+   render.c, next to the hotkeys that resize the window at runtime. */
 
 /* Parse a scale override; returns 0 if it is not a usable number. */
 static int parse_scale(const char *s) {
+    if (SDL_strcasecmp(s, "auto") == 0) return -1;   /* -1 = fit the display */
     char *end;
     long v = strtol(s, &end, 10);
     if (end == s || *end != '\0' || v < SCALE_MIN || v > SCALE_MAX) return 0;
@@ -61,12 +45,16 @@ static void usage(const char *prog) {
            "  --play [FILE]     play back a demo (default: xquest.dmo in the\n"
            "                    config dir) and return to the menu\n"
            "  --record [FILE]   record the next game to FILE\n"
-           "  --scale N         window size multiplier of 320x240 (%d-%d);\n"
-           "                    the default fits the window to your screen\n"
+           "  --scale N         window size multiplier of 320x240 (%d-%d), or\n"
+           "                    'auto' (the default) to fit your screen\n"
+           "  --fullscreen      start fullscreen\n"
            "  --dump-frames F   with --play, write raw 320x240 BGRA frames to F\n"
            "                    (or - for stdout) as fast as possible, for\n"
            "                    encoding to video. Pipe into ffmpeg.\n"
            "  --help            show this message\n\n"
+           "F11 or Alt+Enter toggles fullscreen at any time, and Ctrl+plus /\n"
+           "Ctrl+minus resize the window a step at a time. XQUEST_SCALE and\n"
+           "XQUEST_FULLSCREEN set the same things from the environment.\n\n"
            "With no options the game starts normally. A demo file also drives\n"
            "attract mode: the menu plays it after %d seconds idle.\n",
            prog, SCALE_MIN, SCALE_MAX, MENU_IDLE_SECONDS);
@@ -79,15 +67,20 @@ int main(int argc, char **argv) {
 
     const char *play_arg = NULL, *record_arg = NULL, *dump_arg = NULL;
     bool want_play = false, want_record = false;
-    int  scale = 0;   /* 0 = fit to the display */
+    int  scale = -1;            /* -1 = fit to the display */
+    bool fullscreen = false;
 
-    const char *scale_env = getenv("XQUEST_SCALE");
-    if (scale_env && scale_env[0] != '\0') {
-        scale = parse_scale(scale_env);
-        if (!scale)
-            fprintf(stderr, "xquest: ignoring XQUEST_SCALE=%s (want %d-%d)\n",
-                    scale_env, SCALE_MIN, SCALE_MAX);
+    const char *env = getenv("XQUEST_SCALE");
+    if (env && env[0] != '\0') {
+        scale = parse_scale(env);
+        if (!scale) {
+            fprintf(stderr, "xquest: ignoring XQUEST_SCALE=%s (want %d-%d or auto)\n",
+                    env, SCALE_MIN, SCALE_MAX);
+            scale = -1;
+        }
     }
+    env = getenv("XQUEST_FULLSCREEN");
+    if (env && env[0] != '\0' && env[0] != '0') fullscreen = true;
     for (int i = 1; i < argc; i++) {
         /* An optional filename may follow; anything starting with '-' is the
            next option, not a filename. */
@@ -97,10 +90,12 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--record") == 0) {
             want_record = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') record_arg = argv[++i];
+        } else if (strcmp(argv[i], "--fullscreen") == 0) {
+            fullscreen = true;
         } else if (strcmp(argv[i], "--scale") == 0) {
             if (i + 1 >= argc || !(scale = parse_scale(argv[i + 1]))) {
-                fprintf(stderr, "xquest: --scale needs a number from %d to %d\n",
-                        SCALE_MIN, SCALE_MAX);
+                fprintf(stderr, "xquest: --scale needs a number from %d to %d, "
+                                "or 'auto'\n", SCALE_MIN, SCALE_MAX);
                 return 1;
             }
             i++;
@@ -143,13 +138,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!scale) scale = auto_window_scale();
+    /* A comfortable default leaves a 10% margin for panels and the title
+       bar; a scale the user asked for still has to fit on the screen. */
+    scale = (scale < 0) ? renderer_fit_scale(0, 90)
+                        : (scale > renderer_fit_scale(0, 100)
+                              ? renderer_fit_scale(0, 100) : scale);
 
     SDL_Window *win = SDL_CreateWindow(
         "XQuest",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         320 * scale, 240 * scale,
-        SDL_WINDOW_RESIZABLE);
+        SDL_WINDOW_RESIZABLE |
+            (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
     if (!win) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         SDL_Quit();
@@ -175,6 +175,9 @@ int main(int argc, char **argv) {
         SDL_Quit();
         return 1;
     }
+    /* Started fullscreen, the window already reports the screen size, so
+       state the windowed scale to drop back to. */
+    r.scale = scale;
 
     /* gamespeed per difficulty: Wimp→45, Timid→54, Average→64, Tricky→77, Inhuman→96 */
     static const int diff_speed[5] = {45, 54, 64, 77, 96};
@@ -302,6 +305,7 @@ int main(int argc, char **argv) {
 
             SDL_Event ev;
             while (SDL_PollEvent(&ev)) {
+                if (renderer_display_event(&r, &ev)) continue;
                 if (ev.type == SDL_QUIT) { running = 0; quit_app = true; }
                 if (ev.type == SDL_KEYDOWN) {
                     SDL_Keycode sym = ev.key.keysym.sym;

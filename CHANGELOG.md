@@ -6,14 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- `--scale N` and `XQUEST_SCALE=N` to set the window size as a multiple
-  of the 320x240 logical resolution.
+- `--scale N|auto` and `XQUEST_SCALE` to set the window size as a
+  multiple of the 320x240 logical resolution. A requested scale is
+  capped at what fits the display.
+- `--fullscreen` and `XQUEST_FULLSCREEN`, plus an F11 / Alt+Enter
+  toggle that works in the menu and in game. It is borderless desktop
+  fullscreen, so no video mode switch, and the 4:3 picture is
+  letterboxed.
+- Ctrl+plus / Ctrl+minus resize the window one step at a time, matching
+  the binding in mario-final-sdl.
+- `test_display` covers the display hotkeys against SDL's dummy video
+  driver, so it runs headless in CI.
 
 ### Changed
 - The window now sizes itself to the display instead of always opening
   at a fixed 960x720, which was tiny on a high-resolution screen. It
-  picks the largest whole multiple of 320x240 that fills about 85% of
-  the display's usable area.
+  picks the largest whole multiple of 320x240 that fills about 90% of
+  the display's usable area, the same rule mario-final-sdl uses.
 
 ## [1.0.0] - 2026-08-29
 
