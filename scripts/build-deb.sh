@@ -39,5 +39,9 @@ Description: XQuest arcade shooter - SDL2 port for Linux
  including the original game data.
 EOF
 
+# The one file Debian actually wants alongside the binary. The old debian/
+# tree carried a DEP-5 copy of this; the LICENSE file is the source of truth.
+install -Dm644 "$REPO_ROOT/LICENSE" "$PKGROOT/usr/share/doc/xquest/copyright"
+
 dpkg-deb --build --root-owner-group "$PKGROOT"
 echo "Done: ${PKGROOT}.deb"

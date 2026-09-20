@@ -21,6 +21,29 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  # Build the .deb on every push, not only at release time. The packaging
+  # path used to be exercised once per release, which is how it drifted out
+  # of step with everything else without anyone noticing.
+  package-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev cmake dpkg-dev
+      - name: Build .deb
+        run: bash scripts/build-deb.sh
+      - name: Check the package carries the project version
+        run: |
+          . scripts/version.sh
+          version="$(xquest_version)"
+          deb="build-deb/xquest_${version}_$(dpkg --print-architecture).deb"
+          test -f "$deb" || { echo "expected $deb"; ls build-deb; exit 1; }
+          test "$(dpkg-deb -f "$deb" Version)" = "$version"
+          dpkg-deb -c "$deb" | grep -q usr/games/xquest
+          dpkg-deb -c "$deb" | grep -q usr/share/man/man6/xquest.6
+          dpkg-deb -c "$deb" | grep -q usr/share/doc/xquest/copyright
+          echo "built and checked $deb"
+
   build-macos:
     runs-on: macos-latest
     steps:

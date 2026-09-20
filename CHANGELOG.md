@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+- The `debian/` directory. It held a debhelper source-package tree
+  (`control`, `rules`, `*.install`, `source/format`, `copyright`,
+  `changelog`) that no build ever used: the `.deb` is built by
+  `scripts/build-deb.sh`, which writes its own control file. Two
+  packaging routes, one of them dead, is how the version numbering
+  drifted apart in the first place.
+
+### Changed
+- The desktop entry and the man page, the only files in `debian/` that
+  anything actually read, moved to `packaging/`. The man page is now a
+  template whose version comes from `project(xquest VERSION ...)`.
+- The `.deb` now carries `/usr/share/doc/xquest/copyright`, taken from
+  `LICENSE`. That was the one thing the deleted DEP-5 file was for.
+- CI builds and checks the `.deb` on every push, instead of the
+  packaging path only ever running at release time.
+
 ## [1.1.1] - 2026-09-20
 
 ### Changed

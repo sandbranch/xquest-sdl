@@ -101,14 +101,16 @@ foreach(sz 16 32 48 64 128 256)
     )
 endforeach()
 
-# Desktop entry and man page
-install(FILES "${CMAKE_SOURCE_DIR}/debian/xquest.desktop"
+# Desktop entry and man page. The man page is generated so its version
+# comes from project(xquest VERSION ...) like everything else.
+install(FILES "${CMAKE_SOURCE_DIR}/packaging/xquest.desktop"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
     OPTIONAL
 )
-install(FILES "${CMAKE_SOURCE_DIR}/debian/xquest.6"
+configure_file("${CMAKE_SOURCE_DIR}/packaging/xquest.6.in"
+               "${CMAKE_BINARY_DIR}/xquest.6" @ONLY)
+install(FILES "${CMAKE_BINARY_DIR}/xquest.6"
     DESTINATION "${CMAKE_INSTALL_MANDIR}/man6"
-    OPTIONAL
 )
 
 # ── Tests ─────────────────────────────────────────────────────────────────────

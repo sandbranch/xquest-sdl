@@ -11,16 +11,6 @@ CMakeFiles/
 cmake_install.cmake
 install_manifest.txt
 
-# Debian packaging build byproducts (debian/control, rules, etc. are source)
-debian/files
-debian/*.substvars
-debian/*.debhelper.log
-debian/.debhelper/
-debian/debhelper-build-stamp
-debian/xquest/
-debian/xquest-data/
-debian/tmp/
-
 # assets/: runtime game data ships in this repo. What stays out: personal
 # save state, and this project's own decoded-JSON tool output (redundant
 # with the binary originals; the engine never reads it).

@@ -1,4 +1,6 @@
-.TH XQUEST 6 "2026-09-20" "1.1.1" "Games"
+.\" Generated from packaging/xquest.6.in by CMake: @PROJECT_VERSION@ comes
+.\" from project(xquest VERSION ...), the one place the version is written.
+.TH XQUEST 6 "2026-09-20" "@PROJECT_VERSION@" "Games"
 .SH NAME
 xquest \- top-down arcade shooter (XQuest v1.3 SDL2 port)
 .SH SYNOPSIS

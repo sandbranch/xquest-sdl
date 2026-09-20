@@ -49,7 +49,7 @@ DESTDIR="$APPDIR" cmake --install "$BUILD_DIR/cmake"
 
 # ── AppDir skeleton ──────────────────────────────────────────────────────────
 # .desktop at root (required by appimagetool)
-cp "$REPO_ROOT/debian/xquest.desktop" "$APPDIR/xquest.desktop"
+cp "$REPO_ROOT/packaging/xquest.desktop" "$APPDIR/xquest.desktop"
 
 # Icon at root (appimagetool looks for <AppName>.png or .DirIcon)
 cp "$REPO_ROOT/assets/icons/xquest.png" "$APPDIR/xquest.png"

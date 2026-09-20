@@ -292,7 +292,8 @@ more recordings mean a wider net.
 
 - `cmake --install` installs to `/usr/games` + `/usr/share/games/xquest`,
   Debian-convention paths.
-- `debian/` - Debian packaging (`xquest` + `xquest-data` binary packages).
+- `packaging/` - desktop entry and man page template, installed by CMake
+  and picked up by every package build.
 - `scripts/build-appimage.sh` - builds a portable AppImage.
 
 ---
