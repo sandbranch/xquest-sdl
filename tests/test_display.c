@@ -2,6 +2,7 @@
    resize the window, and the game's own keys pass through untouched. Runs
    against SDL's dummy video driver, so it needs no screen. */
 #include "render.h"
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -125,6 +126,42 @@ int main(void) {
 
     SDL_DestroyWindow(win);
     SDL_Quit();
+
+    /* ---- Window preferences round-trip ---- */
+
+    const char *tmp = "test_display_prefs.win";
+    remove(tmp);
+
+    WindowPrefs w;
+    CHECK(!window_prefs_load(&w, tmp), "missing file reported as loaded");
+    CHECK(w.scale == 0 && !w.fullscreen, "missing file did not give defaults");
+
+    w.scale = 5; w.fullscreen = true;
+    CHECK(window_prefs_save(&w, tmp), "save failed");
+
+    WindowPrefs back;
+    CHECK(window_prefs_load(&back, tmp), "load failed");
+    CHECK(back.scale == 5, "scale round-trip gave %d, want 5", back.scale);
+    CHECK(back.fullscreen, "fullscreen round-trip lost the flag");
+
+    /* An unknown key from a future version must not discard the rest. */
+    FILE *f = fopen(tmp, "w");
+    CHECK(f != NULL, "cannot write test file");
+    if (f) {
+        fprintf(f, "vsync 1\nscale 7\nfullscreen 0\n");
+        fclose(f);
+    }
+    CHECK(window_prefs_load(&back, tmp), "load with unknown key failed");
+    CHECK(back.scale == 7, "unknown key ate the scale (got %d)", back.scale);
+    CHECK(!back.fullscreen, "unknown key ate the fullscreen flag");
+
+    /* Garbage is not a crash and not a silent wrong size. */
+    f = fopen(tmp, "w");
+    if (f) { fprintf(f, "nonsense\n"); fclose(f); }
+    CHECK(!window_prefs_load(&back, tmp), "garbage reported as loaded");
+    CHECK(back.scale == 0, "garbage left a scale of %d", back.scale);
+
+    remove(tmp);
 
     printf(failures ? "test_display: %d failure(s)\n" : "test_display: ok\n",
            failures);

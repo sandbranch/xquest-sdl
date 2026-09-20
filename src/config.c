@@ -265,3 +265,42 @@ bool config_save(const Config *cfg, const char *path) {
     if (fclose(f) != 0) ok = false;
     return ok;
 }
+
+
+/* ---- Window preferences (see config.h) ---- */
+
+void window_prefs_path(char *buf, size_t n, const char *asset_dir) {
+    user_file_path(buf, n, asset_dir, "xquest.win");
+}
+
+bool window_prefs_load(WindowPrefs *prefs, const char *path) {
+    prefs->scale      = 0;
+    prefs->fullscreen = false;
+
+    FILE *f = fopen(path, "r");
+    if (!f) return false;
+
+    char key[32];
+    int  value;
+    bool got = false;
+    /* Unknown keys are skipped rather than failing the load, so a file
+       written by a later version still gives up what this one understands. */
+    while (fscanf(f, "%31s %d", key, &value) == 2) {
+        if (strcmp(key, "scale") == 0) {
+            if (value >= 0) { prefs->scale = value; got = true; }
+        } else if (strcmp(key, "fullscreen") == 0) {
+            prefs->fullscreen = (value != 0);
+            got = true;
+        }
+    }
+    fclose(f);
+    return got;
+}
+
+bool window_prefs_save(const WindowPrefs *prefs, const char *path) {
+    FILE *f = fopen(path, "w");
+    if (!f) return false;
+    fprintf(f, "scale %d\nfullscreen %d\n",
+            prefs->scale, prefs->fullscreen ? 1 : 0);
+    return fclose(f) == 0;
+}

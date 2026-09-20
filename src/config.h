@@ -61,3 +61,28 @@ bool config_load(Config *cfg, const char *path);
 
 /* Write cfg to path in the original format. Returns false on error. */
 bool config_save(const Config *cfg, const char *path);
+
+
+/* ---- Window preferences ----
+
+   Where you left the window: size and whether it was fullscreen. These are
+   deliberately NOT in xquest.cfg, which we keep byte-compatible with the
+   1994 original; they live beside it in their own small plain-text file
+   (xquest.win, LF-terminated "key value" lines), which the DOS game neither
+   reads nor cares about. A missing or unreadable file just means "fit the
+   display", which is also what a fresh install gets. */
+
+typedef struct {
+    int  scale;        /* multiple of 320x240; 0 = fit the display */
+    bool fullscreen;
+} WindowPrefs;
+
+/* Path to xquest.win, in the same directory as xquest.cfg. */
+void window_prefs_path(char *buf, size_t n, const char *asset_dir);
+
+/* Load from path. On any failure prefs is left at "fit the display, windowed"
+   and the call returns false. */
+bool window_prefs_load(WindowPrefs *prefs, const char *path);
+
+/* Write prefs to path. Returns false on error. */
+bool window_prefs_save(const WindowPrefs *prefs, const char *path);

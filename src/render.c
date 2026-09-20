@@ -118,6 +118,17 @@ static bool is_alt_enter(const SDL_Event *ev) {
 }
 
 bool renderer_display_event(Renderer *r, const SDL_Event *ev) {
+    /* Track what the window actually is, so dragging its corner is
+       remembered too, not just the hotkeys. Never consumed: other loops may
+       care about window events. Fullscreen sizes are not a scale. */
+    if (ev->type == SDL_WINDOWEVENT &&
+        ev->window.event == SDL_WINDOWEVENT_SIZE_CHANGED &&
+        !renderer_is_fullscreen(r)) {
+        int s = ev->window.data1 / RENDER_W;
+        r->scale = s < SCALE_MIN ? SCALE_MIN : (s > SCALE_MAX ? SCALE_MAX : s);
+        return false;
+    }
+
     if (ev->type == SDL_KEYUP)
         return ev->key.keysym.sym == SDLK_F11 || is_alt_enter(ev);
 

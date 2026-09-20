@@ -3,6 +3,7 @@
 xquest \- top-down arcade shooter (XQuest v1.3 SDL2 port)
 .SH SYNOPSIS
 .B xquest
+.RI [ options ]
 .SH DESCRIPTION
 .B xquest
 is a faithful SDL2 port of XQuest v1.3, a fast-paced top-down arcade
@@ -13,6 +14,60 @@ Collect all crystals on each level to open the exit gate, then fly
 through it to advance.
 Meanwhile, avoid or destroy up to 18 distinct enemy types and their
 missiles, collect powerups, and use smart bombs strategically.
+.SH OPTIONS
+.TP
+.BI \-\-scale " N"
+Set the window to
+.I N
+times the game's 320x240 resolution (1 to 16), or
+.B auto
+to fit the display, which is the default. A requested scale is capped
+at what fits on screen.
+.TP
+.B \-\-fullscreen
+Start fullscreen (borderless desktop fullscreen, no video mode switch).
+.TP
+.B \-\-windowed
+Start windowed, whatever was saved from the last run.
+.TP
+.BI \-\-play " [FILE]"
+Play back a demo, then return to the menu. Defaults to
+.I xquest.dmo
+in the config directory.
+.TP
+.BI \-\-record " [FILE]"
+Record the next game to
+.IR FILE .
+.TP
+.BI \-\-dump\-frames " FILE"
+With
+.BR \-\-play ,
+write the raw 320x240 BGRA frames to
+.I FILE
+(or
+.B \-
+for standard output) as fast as possible, for encoding to video.
+.TP
+.B \-\-help
+Show a usage summary and exit.
+.SH ENVIRONMENT
+.TP
+.B XQUEST_SCALE
+A number or
+.BR auto ,
+same as
+.BR \-\-scale .
+.TP
+.B XQUEST_FULLSCREEN
+Any value but
+.B 0
+starts fullscreen.
+.TP
+.B XQUEST_DATA_DIR
+Where to read the game data from, for a portable or relocated install.
+.TP
+.B XQUEST_CONFIG_DIR
+Where to keep the per-user files listed below.
 .SH CONTROLS
 .TP
 .B Arrow keys / WASD
@@ -26,6 +81,12 @@ Fire.
 .TP
 .B Escape
 Return to the main menu.
+.TP
+.B F11 / Alt+Enter
+Toggle fullscreen.
+.TP
+.B Ctrl+plus / Ctrl+minus
+Resize the window one step at a time.
 .SH DIFFICULTY LEVELS
 .TP
 .B Wimp
@@ -41,10 +102,22 @@ Read-only game data (sprites, sounds, enemy definitions).
 .TP
 .I ~/.config/xquest/xquest.scr
 Per-user high-score table (created automatically).
+.TP
+.I ~/.config/xquest/xquest.cfg
+Per-user settings, in the 1994 original's exact text format.
+.TP
+.I ~/.config/xquest/xquest.win
+Window size and fullscreen state, remembered between runs. Kept apart
+from
+.I xquest.cfg
+so that file stays byte-compatible with the original.
+.TP
+.I ~/.config/xquest/xquest.dmo
+Recorded demo, also used for attract mode.
 .SH SEE ALSO
 The original XQuest documentation is available in the original DOS
 distribution (XQUEST.DOC).
 .SH AUTHOR
 SDL2 port by David <david@katalystnord.com>.
 .PP
-Original XQuest v1.3 by Mark Mackey, Copyright \(co 1994\(en1996.
+Original XQuest v1.3 by Mark Mackey, Copyright \(co 1994-1996.

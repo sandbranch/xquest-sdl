@@ -13,7 +13,7 @@
 typedef struct {
     uint8_t  *data;
     uint32_t  len;
-    int       vol;   /* 0–128; applied per-channel before summing */
+    int       vol;   /* 0-128; applied per-channel before summing */
 } Sample;
 
 typedef struct {

@@ -13,7 +13,7 @@ never really left. Different machines, different decades, same jolly
 little ship dingus flying around blowing things up for gem thingies. This
 is my attempt to make sure it never has to leave - a faithful, native
 Linux/SDL2 port of **XQuest v1.3**, the arcade shooter Mark Mackey wrote
-in Turbo Pascal and released as shareware in 1994–1996. Same physics,
+in Turbo Pascal and released as shareware in 1994-1996. Same physics,
 same 50 levels, same 18 enemy types, same demented sense of humour in the
 original docs. No DOSBox required.
 
@@ -103,6 +103,15 @@ gets rearranged. `XQUEST_SCALE` (a number or `auto`) and
 `XQUEST_FULLSCREEN` set the same things from the environment, which is
 handy for a launcher or a desktop file.
 
+The window size and fullscreen state are remembered between runs in
+`xquest.win`, next to `xquest.cfg` in the config dir. It is a separate
+file on purpose: `xquest.cfg` stays byte-compatible with the 1994
+original, which has no idea what a window is. A run that was auto-fitted
+and never resized stays on auto, so the window still fits itself if you
+move to another screen; touch the size once, by hotkey or by dragging
+the corner, and that size is what comes back. `--scale auto` puts it
+back on auto, and `--windowed` undoes a remembered fullscreen.
+
 ---
 
 ## How to play
@@ -181,18 +190,18 @@ centre of the status bar; they blink when about to expire.
 
 | Icon slot | Powerup | Duration | Effect |
 |-----------|---------|----------|--------|
-| 0 | **Shield** | ~10–25 s | Absorbs one source of damage; ship cannot be destroyed |
-| 1 | **AimedFire** | ~30–90 s | Missiles automatically lead the nearest enemy |
-| 2 | **RapidFire** | ~60–135 s | Fires continuously every 4 frames while the fire button is held |
-| 3 | **MultiFire** | ~60–135 s | Each shot fans out into three missiles (±10°) |
-| 4 | **AssFire** | ~60–135 s | Each shot also fires a missile in the opposite direction |
-| 5 | **HeavyFire** | ~60–135 s | All missiles kill enemies in a single hit regardless of HP |
-| 6 | **Bounce** | ~30–90 s | Missiles bounce off the world border instead of disappearing |
+| 0 | **Shield** | ~10-25 s | Absorbs one source of damage; ship cannot be destroyed |
+| 1 | **AimedFire** | ~30-90 s | Missiles automatically lead the nearest enemy |
+| 2 | **RapidFire** | ~60-135 s | Fires continuously every 4 frames while the fire button is held |
+| 3 | **MultiFire** | ~60-135 s | Each shot fans out into three missiles (±10°) |
+| 4 | **AssFire** | ~60-135 s | Each shot also fires a missile in the opposite direction |
+| 5 | **HeavyFire** | ~60-135 s | All missiles kill enemies in a single hit regardless of HP |
+| 6 | **Bounce** | ~30-90 s | Missiles bounce off the world border instead of disappearing |
 
 MultiFire and AssFire stack - with both active, each trigger fires five
 missiles. AimedFire overrides the direction of all of them.
 
-A special Supercrystal result (cases 16–17 in the original code) instantly
+A special Supercrystal result (cases 16-17 in the original code) instantly
 **clears all mines** from the level and grants a brief Shield.
 
 ---
@@ -264,9 +273,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Three suites: the `xquest.cfg` round-trip against the original's exact
-bytes, the `.dmo` format plus replay determinism, and an end-to-end
-replay of `tests/data/reference.dmo` through the real engine.
+Four suites: the `xquest.cfg` round-trip against the original's exact
+bytes, the `.dmo` format plus replay determinism, the display hotkeys
+and window preferences (run against SDL's dummy video driver, so no
+screen needed), and an end-to-end replay of `tests/data/reference.dmo`
+through the real engine.
 
 That last one is the interesting one. A demo stores only the player's
 inputs, so everything else about the run is the engine's doing: replaying
@@ -290,7 +301,7 @@ more recordings mean a wider net.
 
 - **Author:** Mark Mackey (Atomjack)
 - **Version ported:** XQuest 1.3
-- **Year:** 1994–1996
+- **Year:** 1994-1996
 - **Platform:** DOS, Mode X VGA (320×240)
 - **Original site:** [swallowtail.org/xquest](http://www.swallowtail.org/xquest/) (download links are dead; see the archival copy in this repo's Releases)
 - **Play it in-browser right now:** [Internet Archive (DOSBox)](https://archive.org/details/msdos_XQuest_1994)

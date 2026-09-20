@@ -25,12 +25,14 @@
    display; --scale / XQUEST_SCALE override it. The sizing itself lives in
    render.c, next to the hotkeys that resize the window at runtime. */
 
-/* Parse a scale override; returns 0 if it is not a usable number. */
+/* Parse a scale override: a number, or 0 for "auto". Returns -1 if it is
+   neither, which is distinct from 0 because asking for auto is a real
+   choice that overrides the saved size. */
 static int parse_scale(const char *s) {
-    if (SDL_strcasecmp(s, "auto") == 0) return -1;   /* -1 = fit the display */
+    if (SDL_strcasecmp(s, "auto") == 0) return 0;
     char *end;
     long v = strtol(s, &end, 10);
-    if (end == s || *end != '\0' || v < SCALE_MIN || v > SCALE_MAX) return 0;
+    if (end == s || *end != '\0' || v < SCALE_MIN || v > SCALE_MAX) return -1;
     return (int)v;
 }
 
@@ -48,13 +50,16 @@ static void usage(const char *prog) {
            "  --scale N         window size multiplier of 320x240 (%d-%d), or\n"
            "                    'auto' (the default) to fit your screen\n"
            "  --fullscreen      start fullscreen\n"
+           "  --windowed        start windowed, whatever was saved last\n"
            "  --dump-frames F   with --play, write raw 320x240 BGRA frames to F\n"
            "                    (or - for stdout) as fast as possible, for\n"
            "                    encoding to video. Pipe into ffmpeg.\n"
            "  --help            show this message\n\n"
            "F11 or Alt+Enter toggles fullscreen at any time, and Ctrl+plus /\n"
            "Ctrl+minus resize the window a step at a time. XQUEST_SCALE and\n"
-           "XQUEST_FULLSCREEN set the same things from the environment.\n\n"
+           "XQUEST_FULLSCREEN set the same things from the environment. The\n"
+           "size and fullscreen state you leave are remembered in xquest.win,\n"
+           "beside xquest.cfg.\n\n"
            "With no options the game starts normally. A demo file also drives\n"
            "attract mode: the menu plays it after %d seconds idle.\n",
            prog, SCALE_MIN, SCALE_MAX, MENU_IDLE_SECONDS);
@@ -67,20 +72,20 @@ int main(int argc, char **argv) {
 
     const char *play_arg = NULL, *record_arg = NULL, *dump_arg = NULL;
     bool want_play = false, want_record = false;
-    int  scale = -1;            /* -1 = fit to the display */
-    bool fullscreen = false;
+    /* -1 means "nobody asked": fall back to the saved preference, then to
+       fitting the display. */
+    int scale      = -1;
+    int fullscreen = -1;
 
     const char *env = getenv("XQUEST_SCALE");
     if (env && env[0] != '\0') {
         scale = parse_scale(env);
-        if (!scale) {
+        if (scale < 0)
             fprintf(stderr, "xquest: ignoring XQUEST_SCALE=%s (want %d-%d or auto)\n",
                     env, SCALE_MIN, SCALE_MAX);
-            scale = -1;
-        }
     }
     env = getenv("XQUEST_FULLSCREEN");
-    if (env && env[0] != '\0' && env[0] != '0') fullscreen = true;
+    if (env && env[0] != '\0') fullscreen = (env[0] != '0');
     for (int i = 1; i < argc; i++) {
         /* An optional filename may follow; anything starting with '-' is the
            next option, not a filename. */
@@ -91,9 +96,11 @@ int main(int argc, char **argv) {
             want_record = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') record_arg = argv[++i];
         } else if (strcmp(argv[i], "--fullscreen") == 0) {
-            fullscreen = true;
+            fullscreen = 1;
+        } else if (strcmp(argv[i], "--windowed") == 0) {
+            fullscreen = 0;
         } else if (strcmp(argv[i], "--scale") == 0) {
-            if (i + 1 >= argc || !(scale = parse_scale(argv[i + 1]))) {
+            if (i + 1 >= argc || (scale = parse_scale(argv[i + 1])) < 0) {
                 fprintf(stderr, "xquest: --scale needs a number from %d to %d, "
                                 "or 'auto'\n", SCALE_MIN, SCALE_MAX);
                 return 1;
@@ -138,18 +145,30 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* Where the window was left last time. Its own file, not xquest.cfg:
+       see config.h. Anything asked for on the command line or in the
+       environment wins over it. */
+    WindowPrefs wprefs;
+    char wprefs_path[512];
+    window_prefs_path(wprefs_path, sizeof(wprefs_path), asset_dir);
+    window_prefs_load(&wprefs, wprefs_path);
+    if (scale < 0)      scale = wprefs.scale;   /* 0 there also means auto */
+    if (fullscreen < 0) fullscreen = wprefs.fullscreen ? 1 : 0;
+
+    bool auto_scale = (scale == 0);
+
     /* A comfortable default leaves a 10% margin for panels and the title
        bar; a scale the user asked for still has to fit on the screen. */
-    scale = (scale < 0) ? renderer_fit_scale(0, 90)
-                        : (scale > renderer_fit_scale(0, 100)
-                              ? renderer_fit_scale(0, 100) : scale);
+    scale = auto_scale ? renderer_fit_scale(0, 90)
+                       : (scale > renderer_fit_scale(0, 100)
+                             ? renderer_fit_scale(0, 100) : scale);
 
     SDL_Window *win = SDL_CreateWindow(
         "XQuest",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         320 * scale, 240 * scale,
         SDL_WINDOW_RESIZABLE |
-            (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
+            (fullscreen > 0 ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
     if (!win) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         SDL_Quit();
@@ -178,6 +197,13 @@ int main(int argc, char **argv) {
     /* Started fullscreen, the window already reports the screen size, so
        state the windowed scale to drop back to. */
     r.scale = scale;
+
+    /* One line on stderr saying what we picked, as mario-final-sdl does: the
+       first thing worth knowing in a "the window is the wrong size" report. */
+    fprintf(stderr, "xquest: %dx scale (%dx%d)%s%s\n",
+            scale, RENDER_W * scale, RENDER_H * scale,
+            auto_scale ? " [auto]" : "",
+            renderer_is_fullscreen(&r) ? " [fullscreen]" : "");
 
     /* gamespeed per difficulty: Wimp→45, Timid→54, Average→64, Tricky→77, Inhuman→96 */
     static const int diff_speed[5] = {45, 54, 64, 77, 96};
@@ -515,6 +541,16 @@ int main(int argc, char **argv) {
     /* The original wrote xquest.cfg unconditionally on exit (WriteDefaults at
        the end of xquest.pas), which is what creates the file on a first run. */
     save_settings(&cfg, cfg_path);
+
+    /* Remember the window for next time. Like the settings above, a failure
+       here is a shrug, not an error: the game still ran. */
+    /* An auto-fitted run nobody resized stays auto, so the window keeps
+       fitting itself if the screen or the monitor changes. Touch the size at
+       all, by hotkey or by dragging, and that exact size is what we keep. */
+    wprefs.scale      = (auto_scale && r.scale == scale) ? 0 : r.scale;
+    wprefs.fullscreen = renderer_is_fullscreen(&r);
+    if (!window_prefs_save(&wprefs, wprefs_path))
+        fprintf(stderr, "xquest: could not save window size to %s\n", wprefs_path);
 
     if (dump && dump != stdout) fclose(dump);
 

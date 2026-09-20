@@ -15,8 +15,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   letterboxed.
 - Ctrl+plus / Ctrl+minus resize the window one step at a time, matching
   the binding in mario-final-sdl.
-- `test_display` covers the display hotkeys against SDL's dummy video
-  driver, so it runs headless in CI.
+- Window size and fullscreen state are remembered between runs, in a new
+  `xquest.win` beside `xquest.cfg` in the config dir. It is deliberately
+  a separate file: `xquest.cfg` stays byte-compatible with the 1994
+  original. A run that was auto-fitted and never resized stays auto.
+- `--windowed`, to undo a remembered fullscreen, and `--scale auto` to
+  go back to fitting the display.
+- A line on stderr at startup saying which scale was picked and why,
+  as mario-final-sdl does.
+- `test_display` covers the display hotkeys and the `xquest.win`
+  round-trip against SDL's dummy video driver, so it runs headless in CI.
 
 ### Changed
 - The window now sizes itself to the display instead of always opening
@@ -127,7 +135,7 @@ Decoded assets (14 JSON files):
 
 | File | Source | Contents |
 |------|--------|----------|
-| `gamedata.json` | Pascal source | Game palette (255 entries, VGA 6-bit), title screen palette, title logo palette (32-entry red ramp, indices 224–255), 19 enemy kind definitions, 6 missile kind definitions, 50 level records, per-level enemy probability tables, 5 difficulty tiers, 7 power-up durations, 25 sound names, 5 completion rank names, smart-bomb flash palette, font ASCII map, starfield parameters, music note |
+| `gamedata.json` | Pascal source | Game palette (255 entries, VGA 6-bit), title screen palette, title logo palette (32-entry red ramp, indices 224-255), 19 enemy kind definitions, 6 missile kind definitions, 50 level records, per-level enemy probability tables, 5 difficulty tiers, 7 power-up durations, 25 sound names, 5 completion rank names, smart-bomb flash palette, font ASCII map, starfield parameters, music note |
 | `sprites.json` | `xquest.gfx` | 24 ship rotation frames, player missile, 3 collectible sprites (crystal/mine/smart-bomb), enemy mine, 87 enemy animation frames across 19 enemy kinds, 6 enemy missile sprites, HUD icons (ship/smart-bomb/crystal/7 power-ups), gate pair, 4 border corners, 12 enemy-gate frames, attractor sprite, 10 small-font digit glyphs; all as `{width, height, pixels[]}` palette-index arrays |
 | `font.json` | `xquest.fnt` | 40 in-game display font glyphs (fixed bitmap) |
 | `font2.json` | `xquest2.fnt` | Full Comix display font, variable-width glyphs keyed by ASCII code |
