@@ -75,6 +75,21 @@ cmake -B build -DXQUEST_ASSET_DIR=/path/to/xquest
 cmake --build build
 ```
 
+### Window size
+
+The game renders at the original 320x240 and the window is an integer
+multiple of that, so every pixel stays a square block. By default the
+window is sized to fill about 85% of your screen's usable area, which
+keeps it readable on a 4K laptop rather than a postage stamp in the
+middle. Override it with `--scale N` (or `XQUEST_SCALE=N`):
+
+```sh
+./build/xquest --scale 3      # a 960x720 window
+```
+
+The window is resizable either way; the picture is letterboxed to keep
+the 4:3 aspect.
+
 ---
 
 ## How to play

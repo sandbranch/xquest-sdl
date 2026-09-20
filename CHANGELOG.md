@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `--scale N` and `XQUEST_SCALE=N` to set the window size as a multiple
+  of the 320x240 logical resolution.
+
+### Changed
+- The window now sizes itself to the display instead of always opening
+  at a fixed 960x720, which was tiny on a high-resolution screen. It
+  picks the largest whole multiple of 320x240 that fills about 85% of
+  the display's usable area.
+
 ## [1.0.0] - 2026-08-29
 
 Feature-complete against XQuest v1.3. Every subsystem of the original is

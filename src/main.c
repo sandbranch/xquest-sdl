@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "assets.h"
 #include "render.h"
@@ -18,6 +19,37 @@
 
 #define TICK_MS 15   /* ~67 fps fixed timestep */
 
+/* The game renders 320x240 and the window is an integer multiple of that, so
+   every game pixel stays a perfect square block. A fixed 3x window is a
+   postage stamp on a 4K panel, so pick the largest multiple that leaves a
+   comfortable margin inside the display's usable area (the work area, so we
+   never hide under a panel or dock). --scale / XQUEST_SCALE override it. */
+#define WINDOW_FILL 0.85f   /* fraction of the usable area to fill */
+#define SCALE_MIN   1
+#define SCALE_MAX   16
+
+static int auto_window_scale(void) {
+    SDL_Rect usable;
+    if (SDL_GetDisplayUsableBounds(0, &usable) != 0 ||
+        usable.w <= 0 || usable.h <= 0) {
+        return 3;   /* no idea how big the screen is: the old default */
+    }
+    int sx = (int)(usable.w * WINDOW_FILL) / 320;
+    int sy = (int)(usable.h * WINDOW_FILL) / 240;
+    int s  = sx < sy ? sx : sy;
+    if (s < SCALE_MIN) s = SCALE_MIN;
+    if (s > SCALE_MAX) s = SCALE_MAX;
+    return s;
+}
+
+/* Parse a scale override; returns 0 if it is not a usable number. */
+static int parse_scale(const char *s) {
+    char *end;
+    long v = strtol(s, &end, 10);
+    if (end == s || *end != '\0' || v < SCALE_MIN || v > SCALE_MAX) return 0;
+    return (int)v;
+}
+
 /* Settings are a convenience, never a reason to fail: warn once and carry on. */
 static void save_settings(const Config *cfg, const char *path) {
     if (!config_save(cfg, path))
@@ -29,13 +61,15 @@ static void usage(const char *prog) {
            "  --play [FILE]     play back a demo (default: xquest.dmo in the\n"
            "                    config dir) and return to the menu\n"
            "  --record [FILE]   record the next game to FILE\n"
+           "  --scale N         window size multiplier of 320x240 (%d-%d);\n"
+           "                    the default fits the window to your screen\n"
            "  --dump-frames F   with --play, write raw 320x240 BGRA frames to F\n"
            "                    (or - for stdout) as fast as possible, for\n"
            "                    encoding to video. Pipe into ffmpeg.\n"
            "  --help            show this message\n\n"
            "With no options the game starts normally. A demo file also drives\n"
            "attract mode: the menu plays it after %d seconds idle.\n",
-           prog, MENU_IDLE_SECONDS);
+           prog, SCALE_MIN, SCALE_MAX, MENU_IDLE_SECONDS);
 }
 
 int main(int argc, char **argv) {
@@ -45,6 +79,15 @@ int main(int argc, char **argv) {
 
     const char *play_arg = NULL, *record_arg = NULL, *dump_arg = NULL;
     bool want_play = false, want_record = false;
+    int  scale = 0;   /* 0 = fit to the display */
+
+    const char *scale_env = getenv("XQUEST_SCALE");
+    if (scale_env && scale_env[0] != '\0') {
+        scale = parse_scale(scale_env);
+        if (!scale)
+            fprintf(stderr, "xquest: ignoring XQUEST_SCALE=%s (want %d-%d)\n",
+                    scale_env, SCALE_MIN, SCALE_MAX);
+    }
     for (int i = 1; i < argc; i++) {
         /* An optional filename may follow; anything starting with '-' is the
            next option, not a filename. */
@@ -54,6 +97,13 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--record") == 0) {
             want_record = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') record_arg = argv[++i];
+        } else if (strcmp(argv[i], "--scale") == 0) {
+            if (i + 1 >= argc || !(scale = parse_scale(argv[i + 1]))) {
+                fprintf(stderr, "xquest: --scale needs a number from %d to %d\n",
+                        SCALE_MIN, SCALE_MAX);
+                return 1;
+            }
+            i++;
         } else if (strcmp(argv[i], "--dump-frames") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "xquest: --dump-frames needs a file (or -)\n");
@@ -93,10 +143,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (!scale) scale = auto_window_scale();
+
     SDL_Window *win = SDL_CreateWindow(
         "XQuest",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        960, 720,
+        320 * scale, 240 * scale,
         SDL_WINDOW_RESIZABLE);
     if (!win) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
