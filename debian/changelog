@@ -1,3 +1,17 @@
+xquest (1.3-4) unstable; urgency=low
+
+  * The window now sizes itself to the display instead of a fixed 960x720,
+    which was tiny on a high-resolution screen.
+  * New --scale, --fullscreen and --windowed options, with XQUEST_SCALE and
+    XQUEST_FULLSCREEN as environment equivalents.
+  * F11 or Alt+Enter toggles fullscreen; Ctrl+plus and Ctrl+minus resize the
+    window one step at a time.
+  * Window size and fullscreen state are remembered between runs, in
+    ~/.config/xquest/xquest.win.
+  * The manual page now documents the options, environment and files.
+
+ -- David <david@katalystnord.com>  Sun, 20 Sep 2026 13:20:00 +0200
+
 xquest (1.3-3) unstable; urgency=low
 
   * Demo recording, playback and attract mode, in the original .dmo format.

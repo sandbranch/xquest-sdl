@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-20
+
+The window finally behaves itself on a modern screen: it sizes to your
+display, goes fullscreen, and remembers where you left it.
+
 ### Added
 - `--scale N|auto` and `XQUEST_SCALE` to set the window size as a
   multiple of the 320x240 logical resolution. A requested scale is

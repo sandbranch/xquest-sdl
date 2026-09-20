@@ -1,6 +1,7 @@
 # Build output
 build/
 build-appimage/
+build-deb/
 obj-*/
 *.AppImage
 *.o
