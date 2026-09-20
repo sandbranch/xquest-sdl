@@ -1,4 +1,19 @@
-xquest (1.3-4) unstable; urgency=low
+xquest (1.1.1-1) unstable; urgency=low
+
+  * One release number everywhere. project(xquest VERSION ...) in
+    CMakeLists.txt is now the single source, read by the binary's new
+    --version, the .deb, the .dmg, the AppImage and the Windows installer,
+    and checked against the release tag when a release is built.
+  * Renumbered this changelog to the port's own releases. The older entries
+    were numbered 1.3-N, after the 1994 game this ports, but no package was
+    ever published under those numbers: the .deb has always taken its
+    version from the release tag.
+  * The AppImage now carries the version in its filename like the other
+    artifacts, and no artifact keeps the tag's leading "v".
+
+ -- David <david@katalystnord.com>  Sun, 20 Sep 2026 15:30:00 +0200
+
+xquest (1.1.0-1) unstable; urgency=low
 
   * The window now sizes itself to the display instead of a fixed 960x720,
     which was tiny on a high-resolution screen.
@@ -12,7 +27,7 @@ xquest (1.3-4) unstable; urgency=low
 
  -- David <david@katalystnord.com>  Sun, 20 Sep 2026 13:20:00 +0200
 
-xquest (1.3-3) unstable; urgency=low
+xquest (1.0.0-1) unstable; urgency=low
 
   * Demo recording, playback and attract mode, in the original .dmo format.
   * Settings and high scores persist in ~/.config/xquest.
@@ -23,14 +38,14 @@ xquest (1.3-3) unstable; urgency=low
 
  -- David <david@katalystnord.com>  Sat, 29 Aug 2026 20:55:00 +0200
 
-xquest (1.3-2) unstable; urgency=low
+xquest (0.8.0-2) unstable; urgency=low
 
   * Menu mouse support: hover to highlight, click to activate, scroll wheel
     to cycle items.
 
  -- David <david@katalystnord.com>  Mon, 30 Jun 2026 00:00:00 +0200
 
-xquest (1.3-1) unstable; urgency=low
+xquest (0.8.0-1) unstable; urgency=low
 
   * Initial Debian packaging of the SDL2 port.
   * Faithful port of XQuest v1.3 (DOS, 1994) to Linux/SDL2:

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Build xquest-x86_64.AppImage
+# Build xquest-<version>-x86_64.AppImage
 # Run from repo root after scripts/fetch-assets.sh
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build-appimage"
 APPDIR="$BUILD_DIR/XQuest.AppDir"
-OUT="$REPO_ROOT/xquest-x86_64.AppImage"
+. "$(dirname "${BASH_SOURCE[0]}")/version.sh"
+VERSION="$(xquest_resolve_version "$(xquest_version)")"
+OUT="$REPO_ROOT/xquest-${VERSION}-x86_64.AppImage"
 
 DATA_DEST="/usr/share/games/xquest"
 

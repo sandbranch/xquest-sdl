@@ -7,14 +7,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build-deb"
 DATA_DEST="/usr/share/games/xquest"
 
-RAW_VERSION="${XQUEST_VERSION:-0.0.0}"
-RAW_VERSION="${RAW_VERSION#v}"
-# Debian policy: upstream_version must start with a digit.
-if [[ "$RAW_VERSION" =~ ^[0-9] ]]; then
-    VERSION="$RAW_VERSION"
-else
-    VERSION="0.0.0+${RAW_VERSION}"
-fi
+. "$(dirname "${BASH_SOURCE[0]}")/version.sh"
+VERSION="$(xquest_resolve_version "$(xquest_version)")"
 
 ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 PKGROOT="$BUILD_DIR/xquest_${VERSION}_${ARCH}"

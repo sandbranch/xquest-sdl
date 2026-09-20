@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
-project(xquest C)
+# The release number for everything: the binary's --version, the .deb, the
+# .dmg, the AppImage and the Windows installer all take it from here, and
+# scripts/version.sh checks the release tag against it.
+project(xquest VERSION 1.1.1 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -44,6 +47,7 @@ if(NOT MSVC)
 endif()
 target_compile_definitions(xquest PRIVATE
     ASSET_DIR="${XQUEST_ASSET_DIR}"
+    XQUEST_VERSION="${PROJECT_VERSION}"
 )
 if(MSVC)
     target_compile_options(xquest PRIVATE /W4)

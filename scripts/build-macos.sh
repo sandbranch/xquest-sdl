@@ -6,7 +6,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/build-macos"
 APP="$BUILD_DIR/XQuest.app"
-VERSION="${XQUEST_VERSION:-0.0.0}"
+. "$(dirname "${BASH_SOURCE[0]}")/version.sh"
+VERSION="$(xquest_resolve_version "$(xquest_version)")"
 DMG="$REPO_ROOT/XQuest-${VERSION}-macos.dmg"
 
 rm -rf "$BUILD_DIR" "$DMG"

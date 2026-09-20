@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-20
+
+### Changed
+- One release number for everything. `project(xquest VERSION ...)` in
+  `CMakeLists.txt` is the single source: the binary (new `--version`),
+  the `.deb`, the `.dmg`, the AppImage and the Windows installer all
+  read it through `scripts/version.sh`, and a release build fails if the
+  tag disagrees with it rather than shipping two different numbers.
+- `debian/changelog` renumbered from `1.3-N` to the port's own releases.
+  The `1.3` came from the 1994 game this ports, but no package was ever
+  published under those numbers: the `.deb` has always taken its version
+  from the release tag.
+- Artifacts no longer mix `v1.1.0` and `1.1.0`: the tag's leading `v` is
+  stripped everywhere, and the AppImage carries the version in its
+  filename like the rest.
+- `actions/checkout` bumped from v4 to v5 in both workflows, clearing
+  GitHub's Node 20 deprecation warning. It is the only third-party
+  action either workflow uses; every build step is plain shell.
+
+### Added
+- `--version`.
+
 ## [1.1.0] - 2026-09-20
 
 The window finally behaves itself on a modern screen: it sizes to your

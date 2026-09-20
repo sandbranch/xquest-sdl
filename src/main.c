@@ -17,6 +17,12 @@
 #define ASSET_DIR "../xquest"
 #endif
 
+/* Set by CMake from project(xquest VERSION ...), the one place the release
+   number is written down. */
+#ifndef XQUEST_VERSION
+#define XQUEST_VERSION "0.0.0-dev"
+#endif
+
 #define TICK_MS 15   /* ~67 fps fixed timestep */
 
 /* The game renders 320x240 and the window is always a whole multiple of
@@ -43,7 +49,8 @@ static void save_settings(const Config *cfg, const char *path) {
 }
 
 static void usage(const char *prog) {
-    printf("Usage: %s [options]\n\n"
+    printf("XQuest %s\n\n"
+           "Usage: %s [options]\n\n"
            "  --play [FILE]     play back a demo (default: xquest.dmo in the\n"
            "                    config dir) and return to the menu\n"
            "  --record [FILE]   record the next game to FILE\n"
@@ -54,6 +61,7 @@ static void usage(const char *prog) {
            "  --dump-frames F   with --play, write raw 320x240 BGRA frames to F\n"
            "                    (or - for stdout) as fast as possible, for\n"
            "                    encoding to video. Pipe into ffmpeg.\n"
+           "  --version         show the version and exit\n"
            "  --help            show this message\n\n"
            "F11 or Alt+Enter toggles fullscreen at any time, and Ctrl+plus /\n"
            "Ctrl+minus resize the window a step at a time. XQUEST_SCALE and\n"
@@ -62,7 +70,7 @@ static void usage(const char *prog) {
            "beside xquest.cfg.\n\n"
            "With no options the game starts normally. A demo file also drives\n"
            "attract mode: the menu plays it after %d seconds idle.\n",
-           prog, SCALE_MIN, SCALE_MAX, MENU_IDLE_SECONDS);
+           XQUEST_VERSION, prog, SCALE_MIN, SCALE_MAX, MENU_IDLE_SECONDS);
 }
 
 int main(int argc, char **argv) {
@@ -112,6 +120,9 @@ int main(int argc, char **argv) {
                 return 1;
             }
             dump_arg = argv[++i];
+        } else if (strcmp(argv[i], "--version") == 0) {
+            printf("xquest %s\n", XQUEST_VERSION);
+            return 0;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(argv[0]);
             return 0;

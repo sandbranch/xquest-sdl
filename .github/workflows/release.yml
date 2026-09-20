@@ -16,17 +16,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
-      - name: Determine tag
+      - uses: actions/checkout@v5
+      - name: Determine tag and check it against CMakeLists.txt
         id: tag
         shell: bash
         run: |
+          . scripts/version.sh
+          project="$(xquest_version)"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            tag="${{ github.ref_name }}"
+            # One number for everything: a tag that disagrees with
+            # project(xquest VERSION ...) is a bump someone forgot.
+            XQUEST_VERSION="$tag" xquest_resolve_version "$project" >/dev/null
+            version="${tag#v}"
           else
-            echo "tag=dev-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            tag="dev-${{ github.run_number }}"
+            version="$project"
           fi
-      - uses: actions/checkout@v4
+          echo "tag=$tag"         >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,9 +53,11 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     env:
-      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+      # The plain number, never the tag: on a manual run the "tag" is
+      # dev-<n>, which is not a version any artifact should carry.
+      XQUEST_VERSION: ${{ needs.create-release.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libsdl2-dev cmake dpkg-dev
       - name: Build AppImage
@@ -60,16 +72,18 @@ jobs:
           TAG: ${{ needs.create-release.outputs.tag }}
         run: |
           gh release upload "$TAG" --repo "${{ github.repository }}" --clobber \
-            xquest-x86_64.AppImage \
+            "xquest-${XQUEST_VERSION}-x86_64.AppImage" \
             build-deb/*.deb
 
   macos:
     needs: create-release
     runs-on: macos-latest
     env:
-      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+      # The plain number, never the tag: on a manual run the "tag" is
+      # dev-<n>, which is not a version any artifact should carry.
+      XQUEST_VERSION: ${{ needs.create-release.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install dependencies
         run: brew install sdl2
       - name: Build .dmg
@@ -84,9 +98,11 @@ jobs:
     needs: create-release
     runs-on: windows-latest
     env:
-      XQUEST_VERSION: ${{ needs.create-release.outputs.tag }}
+      # The plain number, never the tag: on a manual run the "tag" is
+      # dev-<n>, which is not a version any artifact should carry.
+      XQUEST_VERSION: ${{ needs.create-release.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install SDL2 (vcpkg)
         run: vcpkg install sdl2:x64-windows
       - name: Install NSIS

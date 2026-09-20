@@ -7,7 +7,17 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 $BuildDir = Join-Path $RepoRoot "build-windows"
 $StageDir = Join-Path $BuildDir "stage"
-$Version  = if ($env:XQUEST_VERSION) { $env:XQUEST_VERSION } else { "0.0.0" }
+# Same single source of truth as scripts/version.sh: project() in CMakeLists.
+$Project = (Select-String -Path (Join-Path $RepoRoot "CMakeLists.txt") `
+    -Pattern '^project\(xquest VERSION ([0-9][0-9.]*)').Matches[0].Groups[1].Value
+$Version = $Project
+if ($env:XQUEST_VERSION) {
+    $Tag = $env:XQUEST_VERSION -replace '^v', ''
+    if ($Tag -ne $Project) {
+        throw "version mismatch: tag says $Tag, CMakeLists.txt says $Project. Bump project(xquest VERSION ...) and retag."
+    }
+    $Version = $Tag
+}
 
 Remove-Item -Recurse -Force $BuildDir -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
