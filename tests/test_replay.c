@@ -28,12 +28,20 @@ static int failures = 0;
                    failures++; }                                \
 } while (0)
 
-/* Expected outcome of tests/data/reference.dmo on the current engine. */
-#define EXPECT_FRAMES   12066
+/* Expected outcome of tests/data/reference.dmo on the current engine.
+
+   Re-pinned 2026-10-20 when the level clock, the time bonus, extra ships,
+   the original difficulty speeds and the lost-life restart came in from
+   xquest.pas. The recording was made before them: from the moment level 1
+   runs past its 20-second par the game speeds up, so the recorded flight
+   meets a different game and now ends in game over 846 frames early. It
+   still pins the engine exactly, which is its job here; AQuest (the
+   Asciiverse terminal port) replays it to the same numbers. */
+#define EXPECT_FRAMES   11220
 #define EXPECT_LEVELS       6
-#define EXPECT_CRYSTALS   162
-#define EXPECT_SCORE    36000
-#define EXPECT_DEATHS       2
+#define EXPECT_CRYSTALS   124
+#define EXPECT_SCORE    39400
+#define EXPECT_DEATHS       5
 
 int main(int argc, char **argv) {
     const char *asset_dir = (argc > 1) ? argv[1] : "assets";
@@ -50,15 +58,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    static const int diff_speed[5] = {45, 54, 64, 77, 96};
     int diff = demo_difficulty(&d);
     if (diff < 0 || diff > 4) diff = 2;
 
     GameState g;
     memset(&g, 0, sizeof(g));
     game_init(&g, a.ship[0].w, a.ship[0].h, d.seed);
-    g.diff_level = diff;
-    g.gamespeed  = diff_speed[diff];
+    g.diff_level = diff;   /* level_init sets the speed from it */
     level_init(&g, a.gate_left.w, a.gate_right.w);
 
     int ptr = 0, deaths = 0, levels = 0, crystals = 0;
@@ -91,16 +97,13 @@ int main(int argc, char **argv) {
         entities_tick(&g, &a);
         emissiles_tick(&g, &a);
         if (!exploding) check_collisions(&g, &a);
+        game_clock_tick(&g);
 
         if (g.level_complete) {
             levels++;
-            uint32_t rng = g.rng; long sc = g.score;
-            int lv = g.level + 1, li = g.lives, bo = g.bombs;
-            if (lv > MAX_LEVELS) break;
-            game_init(&g, a.ship[0].w, a.ship[0].h, rng);
-            g.score = sc; g.level = lv; g.lives = li; g.bombs = bo;
-            g.diff_level = diff; g.gamespeed = diff_speed[diff];
-            level_init(&g, a.gate_left.w, a.gate_right.w);
+            add_score(&g, level_bonus(&g, NULL));
+            if (g.level + 1 > MAX_LEVELS) break;
+            level_advance(&g, &a);
             continue;
         }
         if (g.ship_destroyed) { g.ship_destroyed = false; ship_destroy(&g, &a); }
@@ -108,12 +111,7 @@ int main(int argc, char **argv) {
             deaths++;
             g.lives--;
             if (g.lives <= 0) { game_over = true; break; }
-            uint32_t rng = g.rng; long sc = g.score;
-            int lv = g.level, li = g.lives, bo = g.bombs;
-            game_init(&g, a.ship[0].w, a.ship[0].h, rng);
-            g.score = sc; g.level = lv; g.lives = li; g.bombs = bo;
-            g.diff_level = diff; g.gamespeed = diff_speed[diff];
-            level_init(&g, a.gate_left.w, a.gate_right.w);
+            life_restart(&g, &a);
         }
     }
 
@@ -122,7 +120,7 @@ int main(int argc, char **argv) {
 
     CHECK(ptr == EXPECT_FRAMES, "used %d frames, expected %d (replay diverged)",
           ptr, EXPECT_FRAMES);
-    CHECK(!game_over, "run ended in game over; the recording plays to the end");
+    CHECK(game_over, "the run should end in game over (see EXPECT_FRAMES)");
     CHECK(levels   == EXPECT_LEVELS,   "levels %d, expected %d", levels, EXPECT_LEVELS);
     CHECK(crystals == EXPECT_CRYSTALS, "crystals %d, expected %d", crystals, EXPECT_CRYSTALS);
     CHECK(g.score  == EXPECT_SCORE,    "score %ld, expected %d", g.score, EXPECT_SCORE);

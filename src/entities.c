@@ -618,7 +618,7 @@ void enemy_hit(GameState *g, const Assets *a, int idx, int dx, int dy) {
         return;
     }
 
-    g->score += g_enemy_kinds[e->type_idx].score;
+    add_score(g, g_enemy_kinds[e->type_idx].score);
 
     /* Death sound: explosn plays one of three variants randomly */
     if (k->death_sound == SND_EXPLOSN)

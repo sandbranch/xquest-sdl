@@ -439,6 +439,68 @@ void render_sprite_2xv(Renderer *r, const Sprite *s, int x, int y) {
     }
 }
 
+void render_countdown(Renderer *r, const Assets *a, const GameState *g) {
+    long t = (long)g_levels[g->level - 1].time * FRAME_RATE - g->time_on_level;
+    if (t < 0) return;
+    /* ShowCountDown: [m:]ss:hh, hundredths always, right-aligned in seven
+       places; only the digits are drawn, the colons are left as gaps */
+    int bits = (int)((t % FRAME_RATE) * 100 / FRAME_RATE);
+    long secs = t / FRAME_RATE;
+    long mins = secs / 60;
+    secs %= 60;
+    char s[16];
+    if (mins > 0)      snprintf(s, sizeof(s), "%ld:%02ld:%02d", mins, secs, bits);
+    else if (secs > 0) snprintf(s, sizeof(s), "%ld:%02d", secs, bits);
+    else               snprintf(s, sizeof(s), "%02d", bits);
+    char p[8];
+    snprintf(p, sizeof(p), "%7.7s", s);
+    /* TimerX=280, kept clear of the right-hand border */
+    int wx = g->cam_x + 280;
+    if (wx > WORLD_W - 46) wx = WORLD_W - 46;
+    for (int i = 0; i < 7; i++)
+        if (p[i] >= '0' && p[i] <= '9')
+            render_sprite_cam(r, &a->digit[p[i] - '0'], wx + i * 5, g->cam_y + 10,
+                              g->cam_x, g->cam_y);
+}
+
+static void fill(Renderer *r, int x1, int y1, int x2, int y2, uint8_t c) {
+    for (int y = y1; y <= y2; y++)
+        for (int x = x1; x <= x2; x++)
+            if (x >= 0 && x < RENDER_W && y >= 0 && y < RENDER_H)
+                r->buf[y * RENDER_W + x] = r->pal[c];
+}
+
+/* XText with a box: the font drawn whole (its background is the window's
+   colour 14), then DrawBox round it. */
+static void boxed_text(Renderer *r, const Assets *a, int x, int y, const char *str) {
+    int n = (int)strlen(str);
+    render_text(r, a, x, y, str);
+    fill(r, x - 2, y - 1, x + n * 8 + 2, y - 1, 10);
+    fill(r, x - 2, y,     x - 2,         y + 14, 10);
+    fill(r, x - 2, y + 14, x + n * 8 + 2, y + 14, 23);
+    fill(r, x + n * 8 + 2, y, x + n * 8 + 2, y + 14, 23);
+}
+
+void render_bonus_window(Renderer *r, const Assets *a, int level,
+                         int time_taken, int par, long bonus) {
+    /* XWindow(50,40,270,160, bevel 2) */
+    const int X1 = 50, Y1 = 40, X2 = 270, Y2 = 160, BS = 2;
+    fill(r, X1 + BS, Y1 + BS, X2 - BS, Y2 - BS, 14);
+    fill(r, X1 + BS, Y1, X2 - BS, Y1 + BS, 23);
+    fill(r, X1 + BS, Y2 - BS, X2 - BS, Y2, 10);
+    fill(r, X1, Y1 + BS, X1 + BS, Y2 - BS, 20);
+    fill(r, X2 - BS, Y1 + BS, X2, Y2 - BS, 12);
+    char s[48];
+    snprintf(s, sizeof(s), "LEVEL %d COMPLETED", level);
+    boxed_text(r, a, X1 + 42, Y1 + 15, s);
+    snprintf(s, sizeof(s), "TIME TAKEN: %3d SECONDS", time_taken);
+    boxed_text(r, a, X1 + 20, Y1 + 40, s);
+    snprintf(s, sizeof(s), "PAR       : %3d SECONDS", par);
+    boxed_text(r, a, X1 + 20, Y1 + 65, s);
+    snprintf(s, sizeof(s), "BONUS     :  %-7ld   ", bonus);   /* number at x+124, as in GiveBonus */
+    boxed_text(r, a, X1 + 20, Y1 + 90, s);
+}
+
 /* SmartBombPal from xqvars.pas (VGA 6-bit * 4 → 8-bit), indices 1-11 */
 static const uint8_t sbpal_r[12] = {0,  0, 32, 56, 80,104,128,152,176,200,224,252};
 static const uint8_t sbpal_g[12] = {0,  0,  0,  0, 16, 48, 80,112,144,176,208,252};

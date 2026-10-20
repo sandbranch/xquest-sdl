@@ -140,6 +140,9 @@ void game_init(GameState *g, int sprite_w, int sprite_h, uint32_t rng_seed) {
     g->gate_move_accum    = 0;
     g->gate_move_dir      = 1;
     g->smart_bomb_flash   = 0;
+    g->new_man_score      = 0;
+    g->last_new_man_score = 0;
+    g->time_on_level      = 0;
     for (int i = 0; i < PU_COUNT; i++) g->powerup_timer[i] = 0;
     entities_level_init(g);
 }
@@ -169,6 +172,10 @@ void level_init(GameState *g, int gate_left_w, int gate_right_w) {
     g->gate_inner_x  = (WORLD_W - rec->gate_width) / 2;
     g->gate_move_accum = 0;
     g->gate_move_dir   = 1;
+    /* SetUpNewLevel: the next extra ship, the clock, the speed */
+    g->new_man_score   = g->last_new_man_score + rec->newman;
+    g->time_on_level   = 0;
+    g->gamespeed       = game_base_speed(g->diff_level);
     entities_level_init(g);
 
     /* Place objects with NoOverlap check (SetupNewLevel in xquest.pas) */
@@ -365,7 +372,7 @@ void level_check_pickups(GameState *g) {
         switch (o->type) {
             case OBJ_CRYSTAL:
                 audio_play(SND_GETCRYSTAL);
-                g->score += 200;
+                add_score(g, 200);
                 g->num_crystals--;
                 if (g->num_crystals <= 0) {
                     g->num_crystals = 0;
@@ -409,4 +416,81 @@ void fire_smart_bomb(GameState *g, const Assets *a) {
     g->bombs--;
     g->smart_bomb_flash = 11;
     audio_play(SND_EXPLOSN);
+}
+
+int game_base_speed(int diff) {
+    if (diff < 0 || diff >= DIFF_LEVELS) diff = 2;
+    return (int)lround(64.0 * g_diff_levels[diff].speedfactor);
+}
+
+void add_score(GameState *g, long points) {
+    g->score += points;
+    while (g->score >= g->new_man_score) {
+        g->last_new_man_score = g->new_man_score;
+        g->new_man_score = g->last_new_man_score + g_levels[g->level - 1].newman;
+        g->lives++;
+        audio_play(SND_WOOHOO);
+    }
+}
+
+void game_clock_tick(GameState *g) {
+    g->time_on_level++;
+    long par = (long)g_levels[g->level - 1].time * FRAME_RATE;
+    if (g->time_on_level > par)
+        g->gamespeed = game_base_speed(g->diff_level)
+                     + (int)((g->time_on_level - par) * 64 / ((long)FRAME_RATE * 32));
+}
+
+long level_bonus(const GameState *g, int *time_taken) {
+    int taken = (int)(g->time_on_level / FRAME_RATE);
+    long bonus = ((long)g_levels[g->level - 1].time - taken) * 500;
+    if (time_taken) *time_taken = taken;
+    return bonus < 0 ? 0 : bonus;
+}
+
+void level_advance(GameState *g, const Assets *a) {
+    GameState keep = *g;
+    game_init(g, a->ship[0].w, a->ship[0].h, keep.rng);
+    g->score              = keep.score;
+    g->lives              = keep.lives;
+    g->bombs              = keep.bombs;
+    g->level              = keep.level + 1;
+    g->diff_level         = keep.diff_level;
+    g->last_new_man_score = keep.last_new_man_score;
+    level_init(g, a->gate_left.w, a->gate_right.w);
+}
+
+void life_restart(GameState *g, const Assets *a) {
+    (void)a;
+    Ship *s = &g->ship;
+    s->x = SHIP_START_X;  s->y = SHIP_START_Y;
+    s->xbr = s->x + s->w - 1;
+    s->ybr = s->y + s->h - 1;
+    s->sx = s->x * 64;  s->sy = s->y * 64;
+    s->delx = s->dely = 0;
+    s->dir = 0;
+
+    g->cam_x = s->x - VIEWPORT_W / 2;
+    g->cam_y = s->y - VIEWPORT_H / 2;
+    if (g->cam_x < 0) g->cam_x = 0;
+    if (g->cam_y < 0) g->cam_y = 0;
+    if (g->cam_x > MAX_VISIBLE_X) g->cam_x = MAX_VISIBLE_X;
+    if (g->cam_y > MAX_VISIBLE_Y) g->cam_y = MAX_VISIBLE_Y;
+
+    g->demo_override      = false;
+    g->ship_destroyed     = false;
+    g->ship_explode_timer = 0;
+    g->level_complete     = false;
+    g->smart_bomb_flash   = 0;
+    g->frame_count        = 0;   /* FrameCount:=0 as each life starts */
+    g->gamespeed          = game_base_speed(g->diff_level);
+    for (int i = 0; i < PU_COUNT; i++) g->powerup_timer[i] = 0;
+    entities_level_init(g);
+
+    /* StartNewLevel drops the objects already hit, each taking the last
+       one's place, and NumEnemyMines:=0 clears the enemy mines. */
+    for (int i = g->num_objects - 1; i >= 0; i--) {
+        if (!g->objects[i].active || g->objects[i].type == OBJ_ENEMY_MINE)
+            g->objects[i] = g->objects[--g->num_objects];
+    }
 }

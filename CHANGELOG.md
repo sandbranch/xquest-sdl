@@ -5,6 +5,49 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+Four things the original does that the port did not, all read from
+xquest.pas in the original distribution (the `archive-original-distribution`
+release). They change the game, so demos recorded before them play out
+differently now.
+
+### Added
+- Extra ships. The level table's `newman` was never read; now, as in
+  `AddToScore` and `BonusShip`, every score passes through `add_score`,
+  which gives a ship (with the woohoo) each time the score reaches the
+  next threshold: the last extra ship's score plus the level's `newman`.
+- The par time. Each level's `time` was never read; now the level clock
+  (`TimeOnLevel`) runs through every tick of the level, lost lives
+  included, and:
+  - the countdown to par is drawn at the top right of the arena in the
+    small digit font (`ShowCountDown`), which the port had loaded but
+    never used;
+  - finishing the level shows the original's bonus window (`GiveBonus`):
+    LEVEL n COMPLETED, the time taken, par, and 500 points for each whole
+    second under par, counted up and then poured into the score, with
+    the phew and countdown sounds; a key or button hurries it along;
+  - past par the game speeds up by one base speed for every 32 seconds
+    over, as the end of the original's game loop does.
+- `level_bonus`, `level_advance`, `life_restart` and `game_clock_tick`
+  in game.c, so the game loop and the replay test share one copy of the
+  level-end and lost-life logic.
+
+### Fixed
+- Difficulty speeds. `main.c` had `{45, 54, 64, 77, 96}`; the original
+  sets `round(64 * speedfactor)`, which is 45, 64, 64, 96 and 128. The
+  speed now comes from `g_diff_levels` in `game_base_speed`.
+- A lost life dealt the level afresh: new crystals and mines, and the
+  count back to full. The original's `NewLife` only restarts it
+  (`StartNewLevel`): the ship back at the start; enemies, shots, enemy
+  mines and power-ups gone; the speed back to base; the crystals already
+  collected stay collected, and the gate and the clock carry on.
+
+### Changed
+- `test_replay` re-pinned: `reference.dmo` was recorded before these
+  changes, so once level 1 runs past par its flight meets a faster game.
+  It now replays to 11,220 frames, 6 levels, 124 crystals, 39,400 points
+  and 5 deaths, ending in game over. AQuest, the Asciiverse terminal port
+  of this code, replays it to the same numbers.
+
 ### Removed
 - The `debian/` directory. It held a debhelper source-package tree
   (`control`, `rules`, `*.install`, `source/format`, `copyright`,

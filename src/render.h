@@ -115,6 +115,15 @@ int comix_text_width(const Assets *a, const char *str);
 void render_comix_text(Renderer *r, const Assets *a, int x, int y,
                        uint8_t color_idx, const char *str);
 
+/* The level's countdown to par (the TimeRecord in xquest.pas), drawn in the
+   small digit font at the top right of the arena; gone once past par. */
+void render_countdown(Renderer *r, const Assets *a, const GameState *g);
+
+/* The bonus window at the end of a level (GiveBonus): LEVEL n COMPLETED,
+   the time taken, par and the bonus, each in a box, in a bevelled window. */
+void render_bonus_window(Renderer *r, const Assets *a, int level,
+                         int time_taken, int par, long bonus);
+
 /* Smart-bomb flash overlay. level 1-11: tints the game viewport pixels with
    the SmartBombPal colour for that level (VGA palette-flash equivalent). */
 void render_flash_overlay(Renderer *r, int level);

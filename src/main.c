@@ -48,6 +48,70 @@ static void save_settings(const Config *cfg, const char *path) {
         fprintf(stderr, "xquest: could not save settings to %s\n", path);
 }
 
+/* DelayOrEvent: wait up to ms, true if a key or button cut it short.
+   Closing the window counts too, and sets *quit. */
+static bool delay_or_event(Renderer *r, uint32_t ms, bool *quit) {
+    uint32_t end = SDL_GetTicks() + ms;
+    while (SDL_GetTicks() < end) {
+        SDL_Event ev;
+        while (SDL_PollEvent(&ev)) {
+            if (renderer_display_event(r, &ev)) continue;
+            if (ev.type == SDL_QUIT) { *quit = true; return true; }
+            if (ev.type == SDL_KEYDOWN || ev.type == SDL_MOUSEBUTTONDOWN ||
+                ev.type == SDL_CONTROLLERBUTTONDOWN) return true;
+        }
+        SDL_Delay(5);
+    }
+    return false;
+}
+
+/* GiveBonus: the level-end window over the last frame. The time bonus
+   counts up, then pours into the score 500 at a time; a key or button
+   hurries each stage along. Whatever is skipped, the score ends up the
+   same: game_bonus is added in full. */
+static void run_bonus(Renderer *r, const Assets *a, GameState *g,
+                      const uint32_t *frame, bool *quit) {
+    int taken;
+    long bonus = level_bonus(g, &taken);
+    int par = g_levels[g->level - 1].time;
+    long steps = bonus / 500;
+    const uint32_t step_ms = 1000 / 15;   /* Ticks div 12 */
+
+#define SHOW(t, b) do { memcpy(r->buf, frame, sizeof(r->buf)); \
+        render_bonus_window(r, a, g->level, (t), par, (b)); \
+        render_clear_hud(r, 1); render_hud(r, a, g); \
+        renderer_present(r); } while (0)
+
+    SHOW(taken, 0);
+    if (!delay_or_event(r, 500, quit)) {
+        for (long i = 1; i <= steps; i++) {
+            SHOW(taken + (int)i, i * 500);
+            if (i % 3 == 1) audio_play(SND_COUNTDOWN);
+            if (delay_or_event(r, step_ms, quit)) break;
+        }
+    } else if (bonus > 0) {
+        audio_play(SND_COUNTDOWN);
+    }
+    if (*quit) { add_score(g, bonus); return; }
+    SHOW(taken + (int)steps, bonus);
+
+    long left = bonus;
+    if (bonus > 0 && !delay_or_event(r, 500, quit)) {
+        for (long i = steps - 1; i >= 0; i--) {
+            add_score(g, 500);
+            left -= 500;
+            audio_play(SND_COUNTDOWN);
+            SHOW(taken + (int)steps, i * 500);
+            if (delay_or_event(r, step_ms, quit)) break;
+        }
+    }
+    add_score(g, left);
+    if (bonus > 0 && left > 0) audio_play(SND_COUNTDOWN);
+    SHOW(taken + (int)steps, 0);
+    if (!*quit) delay_or_event(r, 2500, quit);
+#undef SHOW
+}
+
 static void usage(const char *prog) {
     printf("XQuest %s\n\n"
            "Usage: %s [options]\n\n"
@@ -216,9 +280,6 @@ int main(int argc, char **argv) {
             auto_scale ? " [auto]" : "",
             renderer_is_fullscreen(&r) ? " [fullscreen]" : "");
 
-    /* gamespeed per difficulty: Wimp→45, Timid→54, Average→64, Tricky→77, Inhuman→96 */
-    static const int diff_speed[5] = {45, 54, 64, 77, 96};
-
     /* Player settings, persisted between runs in the original xquest.cfg
        format. A missing or unreadable file just means factory defaults. */
     Config cfg;
@@ -325,8 +386,7 @@ int main(int argc, char **argv) {
         input_init(&inp);
         game_init(&gs, a.ship[0].w, a.ship[0].h, seed);
         if (recording) demo_start(&demo, seed, &cfg);
-        gs.diff_level = game_diff;
-        gs.gamespeed  = diff_speed[game_diff];
+        gs.diff_level = game_diff;   /* level_init sets the speed from it */
         level_init(&gs, a.gate_left.w, a.gate_right.w);
         starfield_init(&sf, 0);
 
@@ -438,22 +498,19 @@ int main(int argc, char **argv) {
                 if (!exploding) check_collisions(&gs, &a);
                 starfield_step(&sf);
 
-                /* Level exit: ship flew through open gate */
+                /* The level clock, last thing in the frame, as in xquest.pas */
+                game_clock_tick(&gs);
+
+                /* Level exit: ship flew through open gate (LevelOver) */
                 if (gs.level_complete) {
-                    int next_level = gs.level + 1;
-                    if (next_level > MAX_LEVELS) { game_over = true; running = 0; break; }
-                    long     saved_score = gs.score;
-                    int      saved_lives = gs.lives;
-                    int      saved_bombs = gs.bombs;
-                    uint32_t saved_rng   = gs.rng;
-                    game_init(&gs, a.ship[0].w, a.ship[0].h, saved_rng);
-                    gs.score = saved_score;
-                    gs.level = next_level;
-                    gs.lives = saved_lives;
-                    gs.bombs = saved_bombs;
-                    gs.diff_level = game_diff;
-                    gs.gamespeed  = diff_speed[game_diff];
-                    level_init(&gs, a.gate_left.w, a.gate_right.w);
+                    static uint32_t last_frame[RENDER_W * RENDER_H];
+                    memcpy(last_frame, r.buf, sizeof(last_frame));
+                    audio_play(SND_PHEW);
+                    run_bonus(&r, &a, &gs, last_frame, &quit_app);
+                    if (quit_app) { running = 0; break; }
+                    if (gs.level + 1 > MAX_LEVELS) { game_over = true; running = 0; break; }
+                    level_advance(&gs, &a);
+                    last_tick = SDL_GetTicks();   /* the window took its time */
                     break;
                 }
 
@@ -467,18 +524,7 @@ int main(int argc, char **argv) {
                 if (gs.ship_explode_timer > 0 && --gs.ship_explode_timer == 0) {
                     gs.lives--;
                     if (gs.lives <= 0) { game_over = true; running = 0; break; }
-                    long saved_score = gs.score;
-                    int  saved_level = gs.level;
-                    int  saved_lives = gs.lives;
-                    int  saved_bombs = gs.bombs;
-                    game_init(&gs, a.ship[0].w, a.ship[0].h, gs.rng);
-                    gs.score = saved_score;
-                    gs.level = saved_level;
-                    gs.lives = saved_lives;
-                    gs.bombs = saved_bombs;
-                    gs.diff_level = game_diff;
-                    gs.gamespeed  = diff_speed[game_diff];
-                    level_init(&gs, a.gate_left.w, a.gate_right.w);
+                    life_restart(&gs, &a);   /* NewLife: same level, carried on */
                 }
             }
 
@@ -492,6 +538,7 @@ int main(int argc, char **argv) {
             render_missiles(&r, &a, &gs);
             render_emissiles(&r, &a, &gs);
             render_enemies(&r, &a, &gs);
+            render_countdown(&r, &a, &gs);
 
             if (gs.ship_explode_timer == 0)
                 render_sprite_cam(&r, &a.ship[gs.ship.dir],

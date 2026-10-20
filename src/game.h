@@ -25,6 +25,7 @@
 #define SHIP_START_Y 160   /* PageHeight div 2 */
 
 /* Physics */
+#define FRAME_RATE       67   /* Framerate in xqvars.pas: ticks per second */
 #define MAX_SHIP_SPEED  640
 #define BASE_GAME_SPEED  64
 #define H_INPUT_SPEED    64
@@ -142,7 +143,16 @@ typedef struct {
 
     /* Difficulty / speed */
     int      diff_level;      /* 0-4, default 2 = Average */
-    int      gamespeed;       /* round(64 * speedfactor) */
+    int      gamespeed;       /* game_base_speed(), plus the overtime speed-up */
+
+    /* Extra ships (AddToScore / BonusShip in xquest.pas): a ship is given
+       each time the score reaches new_man_score. */
+    long     new_man_score;
+    long     last_new_man_score;
+
+    /* Ticks spent on this level (TimeOnLevel), against the level's par
+       time. Keeps running through a lost life; reset by level_init. */
+    long     time_on_level;
 
     /* RNG state (xorshift32) */
     uint32_t rng;
@@ -170,6 +180,34 @@ typedef struct {
 } GameState;
 
 #define SHIP_EXPLODE_TICKS 40  /* freeze duration after ship death */
+
+/* round(BaseGameSpeed * speedfactor) for difficulty diff, as SetUpNewLevel
+   sets GameSpeed: 45, 64, 64, 96, 128 from Wimp to Inhuman. */
+int game_base_speed(int diff);
+
+/* Add to the score, giving an extra ship (with the woohoo) for each
+   new_man_score passed (AddToScore). All scoring goes through here. */
+void add_score(GameState *g, long points);
+
+/* Once per tick, after everything else: count the level clock, and past
+   the level's par time speed the game up by one base speed for every 32
+   seconds over (the end of the game loop in xquest.pas). */
+void game_clock_tick(GameState *g);
+
+/* The bonus for finishing the level now (GiveBonus): 500 points for every
+   whole second under par, never negative. *time_taken gets the seconds. */
+long level_bonus(const GameState *g, int *time_taken);
+
+/* On to the next level, keeping score, lives, bombs and the extra-ship
+   count (LevelOver). The caller adds the bonus first. */
+void level_advance(GameState *g, const Assets *a);
+
+/* After a lost life (NewLife + StartNewLevel): the ship back at the start,
+   enemies, shots, enemy mines and power-ups gone, speed back to base. The
+   level itself carries on: collected crystals stay collected, the gate and
+   its position stay, and the clock keeps running. The caller has already
+   taken the life. */
+void life_restart(GameState *g, const Assets *a);
 
 /* Initialise game state. sprite_w/h are the ship sprite dimensions.
    rng_seed: pass SDL_GetTicks() or similar for variety. */

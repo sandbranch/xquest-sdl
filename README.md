@@ -125,6 +125,17 @@ gate** at the top of the screen opens - fly through it to advance.
 Watch out for **mines** - flying into one destroys your ship instantly,
 unless a Shield powerup is active.
 
+Every level has a **par time**, counting down in the top right corner.
+Finish under par and the level-end window turns each second you had
+left into 500 bonus points. Dawdle past it and the game starts to speed
+up, a little more for every 32 seconds over, until you leave or lose a
+ship.
+
+You start with three ships and earn an **extra ship** every so many
+points: 15,000 on the first levels, rising to 100,000 later. Losing a
+ship puts you back at the start of the same level, with the crystals you
+already collected still gone.
+
 ### The game world
 
 The world (392×320 logical pixels) is larger than the viewport
